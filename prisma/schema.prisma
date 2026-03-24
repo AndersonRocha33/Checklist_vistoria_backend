@@ -1,0 +1,87 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum ItemStatus {
+  PENDENTE
+  CONFORME
+  NAO_CONFORME
+}
+
+enum InspectionStatus {
+  EM_ANDAMENTO
+  CONCLUIDA
+}
+
+model User {
+  id           String       @id @default(uuid())
+  name         String
+  email        String       @unique
+  password     String
+  createdAt    DateTime     @default(now())
+  inspections  Inspection[]
+}
+
+model Enterprise {
+  id           String       @id @default(uuid())
+  name         String
+  createdAt    DateTime     @default(now())
+  apartments   Apartment[]
+}
+
+model Apartment {
+  id             String           @id @default(uuid())
+  number         String
+  enterpriseId   String
+  enterprise     Enterprise       @relation(fields: [enterpriseId], references: [id], onDelete: Cascade)
+  createdAt      DateTime         @default(now())
+  checklistItems ChecklistItem[]
+  inspections    Inspection[]
+
+  @@unique([number, enterpriseId])
+}
+
+model ChecklistItem {
+  id              String           @id @default(uuid())
+  apartmentId      String
+  apartment        Apartment        @relation(fields: [apartmentId], references: [id], onDelete: Cascade)
+  location         String
+  itemName         String
+  quantity         Int
+  createdAt        DateTime         @default(now())
+  inspectionItems  InspectionItem[]
+}
+
+model Inspection {
+  id                  String            @id @default(uuid())
+  apartmentId         String
+  apartment           Apartment         @relation(fields: [apartmentId], references: [id], onDelete: Cascade)
+  userId              String
+  user                User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status              InspectionStatus  @default(EM_ANDAMENTO)
+  reopenedFromPending Boolean           @default(false)
+  inspectorSignature  String?
+  clientSignature     String?
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+  items               InspectionItem[]
+}
+
+model InspectionItem {
+  id              String         @id @default(uuid())
+  inspectionId     String
+  inspection       Inspection     @relation(fields: [inspectionId], references: [id], onDelete: Cascade)
+  checklistItemId  String
+  checklistItem    ChecklistItem  @relation(fields: [checklistItemId], references: [id], onDelete: Cascade)
+  status           ItemStatus     @default(PENDENTE)
+  notes            String?
+  photoUrl         String?
+  updatedAt        DateTime       @updatedAt
+
+  @@unique([inspectionId, checklistItemId])
+}
