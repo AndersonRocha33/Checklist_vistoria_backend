@@ -4,6 +4,7 @@ const path = require('path');
 const fs = require('fs');
 const uploadController = require('../controllers/upload.controller');
 const authMiddleware = require('../middleware/auth');
+const asyncHandler = require('../utils/async-handler');
 
 const router = express.Router();
 
@@ -25,7 +26,7 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
-router.post('/', authMiddleware, upload.single('file'), uploadController.uploadFile);
-router.post('/csv', authMiddleware, upload.single('file'), uploadController.importChecklistCsv);
+router.post('/', authMiddleware, upload.single('file'), asyncHandler(uploadController.uploadFile));
+router.post('/csv', authMiddleware, upload.single('file'), asyncHandler(uploadController.importChecklistCsv));
 
 module.exports = router;

@@ -1,15 +1,43 @@
 const express = require('express');
 const inspectionController = require('../controllers/inspection.controller');
 const authMiddleware = require('../middleware/auth');
+const validate = require('../middleware/validate');
+const asyncHandler = require('../utils/async-handler');
+const {
+  startInspectionSchema,
+  updateInspectionItemSchema,
+  updateInspectionItemsBatchSchema,
+  saveSignaturesSchema
+} = require('../validators/inspection.validator');
 
 const router = express.Router();
 
-router.post('/start', authMiddleware, inspectionController.start);
-router.put('/items/batch', authMiddleware, inspectionController.updateItemsBatch);
-router.put('/:id/signatures', authMiddleware, inspectionController.saveSignatures);
-router.get('/:id/report', authMiddleware, inspectionController.generateReport);
-router.get('/:id', authMiddleware, inspectionController.getById);
-router.put('/item/:itemId', authMiddleware, inspectionController.updateItem);
-router.put('/:id/finish', authMiddleware, inspectionController.finish);
+router.post(
+  '/start',
+  authMiddleware,
+  validate(startInspectionSchema),
+  asyncHandler(inspectionController.start)
+);
+router.put(
+  '/items/batch',
+  authMiddleware,
+  validate(updateInspectionItemsBatchSchema),
+  asyncHandler(inspectionController.updateItemsBatch)
+);
+router.put(
+  '/:id/signatures',
+  authMiddleware,
+  validate(saveSignaturesSchema),
+  asyncHandler(inspectionController.saveSignatures)
+);
+router.get('/:id/report', authMiddleware, asyncHandler(inspectionController.generateReport));
+router.get('/:id', authMiddleware, asyncHandler(inspectionController.getById));
+router.put(
+  '/item/:itemId',
+  authMiddleware,
+  validate(updateInspectionItemSchema),
+  asyncHandler(inspectionController.updateItem)
+);
+router.put('/:id/finish', authMiddleware, asyncHandler(inspectionController.finish));
 
 module.exports = router;

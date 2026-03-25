@@ -1,15 +1,23 @@
 const express = require('express');
 const apartmentController = require('../controllers/apartment.controller');
 const authMiddleware = require('../middleware/auth');
+const validate = require('../middleware/validate');
+const asyncHandler = require('../utils/async-handler');
+const { createApartmentSchema } = require('../validators/apartment.validator');
 
 const router = express.Router();
 
-router.post('/', authMiddleware, (req, res) => apartmentController.create(req, res));
-router.get('/', authMiddleware, (req, res) => apartmentController.listAll(req, res));
+router.post(
+  '/',
+  authMiddleware,
+  validate(createApartmentSchema),
+  asyncHandler(apartmentController.create)
+);
+router.get('/', authMiddleware, asyncHandler(apartmentController.listAll));
 router.get(
   '/enterprise/:enterpriseId',
   authMiddleware,
-  (req, res) => apartmentController.listByEnterprise(req, res)
+  asyncHandler(apartmentController.listByEnterprise)
 );
 
 module.exports = router;

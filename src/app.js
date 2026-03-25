@@ -8,6 +8,7 @@ const enterpriseRoutes = require('./routes/enterprise.routes');
 const apartmentRoutes = require('./routes/apartment.routes');
 const inspectionRoutes = require('./routes/inspection.routes');
 const uploadRoutes = require('./routes/upload.routes');
+const errorHandler = require('./middleware/error-handler');
 
 const app = express();
 
@@ -33,5 +34,7 @@ app.use('/enterprises', enterpriseRoutes);
 app.use('/apartments', apartmentRoutes);
 app.use('/inspections', inspectionRoutes);
 app.use('/upload', uploadRoutes);
+
+app.use(errorHandler);
 
 module.exports = app;
