@@ -19,9 +19,8 @@ class TokenService {
     });
   }
 
-  verifyToken(token) {
+  verify(token) {
     const secret = this.getSecret();
-
     return jwt.verify(token, secret);
   }
 }

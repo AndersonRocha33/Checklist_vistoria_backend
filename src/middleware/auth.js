@@ -17,6 +17,7 @@ async function authMiddleware(req, res, next) {
 
   try {
     const decoded = tokenService.verify(token);
+
     const user = await userRepository.findById(decoded.id);
 
     if (!user) {
@@ -26,12 +27,12 @@ async function authMiddleware(req, res, next) {
     req.user = {
       id: user.id,
       name: user.name,
-      email: user.email
+      email: user.email,
     };
 
     return next();
   } catch (error) {
-    return next(error);
+    return next(new UnauthorizedError('Token inválido ou expirado.'));
   }
 }
 
