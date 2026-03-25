@@ -30,8 +30,11 @@ function groupItemsByLocation(items) {
     .map((location) => ({
       location,
       items: grouped[location].sort((a, b) =>
-        a.checklistItem.itemName.localeCompare(b.checklistItem.itemName, 'pt-BR')
-      )
+        (a.checklistItem.itemName || '').localeCompare(
+          b.checklistItem.itemName || '',
+          'pt-BR'
+        )
+      ),
     }));
 }
 
@@ -40,12 +43,13 @@ function getInspectionMetrics(items) {
     total: items.length,
     conforme: items.filter((item) => item.status === 'CONFORME').length,
     naoConforme: items.filter((item) => item.status === 'NAO_CONFORME').length,
-    pendente: items.filter((item) => item.status === 'PENDENTE').length
+    pendente: items.filter((item) => item.status === 'PENDENTE').length,
   };
 }
 
 function ensurePageSpace(doc, requiredHeight = 120) {
   const usableBottom = doc.page.height - doc.page.margins.bottom;
+
   if (doc.y + requiredHeight > usableBottom) {
     doc.addPage();
   }
@@ -68,7 +72,7 @@ function drawHeaderBlock(doc, inspection) {
     .fillColor('#111827')
     .text('Relatório de Checklist de Entrega', hasLogo ? 170 : 40, 42, {
       width: 360,
-      align: 'left'
+      align: 'left',
     });
 
   doc
@@ -76,7 +80,7 @@ function drawHeaderBlock(doc, inspection) {
     .fillColor('#6b7280')
     .text('Relatório de vistoria do apartamento decorado', hasLogo ? 170 : 40, 72, {
       width: 360,
-      align: 'left'
+      align: 'left',
     });
 
   doc.roundedRect(40, 110, 515, 88, 12).fillAndStroke('#f8fafc', '#dbeafe');
@@ -108,19 +112,22 @@ function drawMetricsBlock(doc, metrics) {
     { label: 'Total de itens', value: metrics.total, color: '#eff6ff', border: '#bfdbfe' },
     { label: 'Conformes', value: metrics.conforme, color: '#ecfdf5', border: '#bbf7d0' },
     { label: 'Não conformes', value: metrics.naoConforme, color: '#fff7ed', border: '#fdba74' },
-    { label: 'Pendentes', value: metrics.pendente, color: '#fefce8', border: '#fde68a' }
+    { label: 'Pendentes', value: metrics.pendente, color: '#fefce8', border: '#fde68a' },
   ];
 
   cards.forEach((card, index) => {
     const x = startX + index * (boxWidth + gap);
+
     doc.roundedRect(x, startY, boxWidth, 72, 10).fillAndStroke(card.color, card.border);
+
     doc.fillColor('#6b7280').fontSize(10).text(card.label, x + 10, startY + 12, {
       width: boxWidth - 20,
-      align: 'center'
+      align: 'center',
     });
+
     doc.fillColor('#111827').fontSize(24).text(String(card.value), x + 10, startY + 32, {
       width: boxWidth - 20,
-      align: 'center'
+      align: 'center',
     });
   });
 
@@ -140,15 +147,20 @@ function getStatusColors(status) {
   return { bg: '#fef3c7', text: '#92400e', border: '#fcd34d' };
 }
 
-function drawStatusBadge(doc, status, x, y, width = 110) {
+function drawStatusBadge(doc, status, x, y, width = 115) {
   const colors = getStatusColors(status);
+
   doc.roundedRect(x, y, width, 22, 8).fillAndStroke(colors.bg, colors.border);
-  doc.fillColor(colors.text).fontSize(10).text(status, x, y + 6, { width, align: 'center' });
+  doc.fillColor(colors.text).fontSize(10).text(status, x, y + 6, {
+    width,
+    align: 'center',
+  });
   doc.fillColor('#111827');
 }
 
 function drawLocationTitle(doc, location) {
   ensurePageSpace(doc, 50);
+
   const startY = doc.y;
   doc.roundedRect(40, startY, 515, 28, 8).fill('#e0e7ff');
   doc.fillColor('#1e3a8a').fontSize(13).text(`Localização: ${location}`, 52, startY + 8);
@@ -156,12 +168,76 @@ function drawLocationTitle(doc, location) {
   doc.y = startY + 40;
 }
 
+async function getImageBuffer(photoUrl) {
+  if (!photoUrl || typeof photoUrl !== 'string') {
+    return null;
+  }
+
+  const base64Buffer = extractBase64Image(photoUrl);
+  if (base64Buffer) {
+    return base64Buffer;
+  }
+
+  if (photoUrl.startsWith('http://') || photoUrl.startsWith('https://')) {
+    const response = await axios.get(photoUrl, {
+      responseType: 'arraybuffer',
+      timeout: 15000,
+    });
+
+    return Buffer.from(response.data);
+  }
+
+  const normalizedPath = photoUrl.replace(/\\/g, '/');
+
+  if (
+    normalizedPath.startsWith('/uploads/') ||
+    normalizedPath.startsWith('uploads/')
+  ) {
+    const fileName = path.basename(normalizedPath);
+    const localPath = path.resolve(__dirname, '../../uploads', fileName);
+
+    if (fs.existsSync(localPath)) {
+      return fs.readFileSync(localPath);
+    }
+  }
+
+  return null;
+}
+
+function getItemSectionHeight(doc, item, hasPhoto) {
+  const contentWidth = 345;
+  const itemName = item.checklistItem.itemName || '-';
+  const notesText = `Observações: ${item.notes || '-'}`;
+
+  doc.fontSize(13);
+  const itemNameHeight = doc.heightOfString(itemName, {
+    width: contentWidth,
+    align: 'left',
+  });
+
+  doc.fontSize(11);
+  const notesHeight = doc.heightOfString(notesText, {
+    width: 470,
+    align: 'left',
+  });
+
+  const baseHeight = 26 + itemNameHeight + 12 + 18 + 8 + notesHeight + 18;
+
+  if (!hasPhoto) {
+    return Math.max(120, baseHeight + 18);
+  }
+
+  return Math.max(360, baseHeight + 245);
+}
+
 async function drawItemSection(doc, item) {
   const hasPhoto = item.status === 'NAO_CONFORME' && item.photoUrl;
-  ensurePageSpace(doc, hasPhoto ? 420 : 120);
+  const sectionHeight = getItemSectionHeight(doc, item, hasPhoto);
+
+  ensurePageSpace(doc, sectionHeight + 12);
 
   const sectionTop = doc.y;
-  doc.roundedRect(40, sectionTop, 515, hasPhoto ? 360 : 105, 10).stroke('#e5e7eb');
+  doc.roundedRect(40, sectionTop, 515, sectionHeight, 10).stroke('#e5e7eb');
 
   const badgeWidth = 115;
   const badgeX = 425;
@@ -171,56 +247,83 @@ async function drawItemSection(doc, item) {
 
   doc.fillColor('#111827').fontSize(13).text(itemName, contentX, sectionTop + 14, {
     width: contentWidth,
-    align: 'left'
+    align: 'left',
   });
 
   drawStatusBadge(doc, item.status, badgeX, sectionTop + 14, badgeWidth);
 
-  const itemNameHeight = doc.heightOfString(itemName, { width: contentWidth, align: 'left' });
-  const detailY = sectionTop + 20 + itemNameHeight;
+  const itemNameHeight = doc.heightOfString(itemName, {
+    width: contentWidth,
+    align: 'left',
+  });
+
+  const detailY = sectionTop + 18 + itemNameHeight + 14;
 
   doc.fontSize(11).fillColor('#111827');
   doc.text(`Quantidade: ${item.checklistItem.quantity}`, contentX, detailY);
-  doc.text(`Observações: ${item.notes || '-'}`, contentX, detailY + 20, { width: 470 });
+
+  const observationsY = detailY + 22;
+  const notesText = `Observações: ${item.notes || '-'}`;
+
+  doc.text(notesText, contentX, observationsY, {
+    width: 470,
+    align: 'left',
+  });
+
+  const notesHeight = doc.heightOfString(notesText, {
+    width: 470,
+    align: 'left',
+  });
 
   if (!hasPhoto) {
-    doc.y = sectionTop + 118;
+    doc.y = sectionTop + sectionHeight + 10;
     return;
   }
 
-  doc.fillColor('#374151').fontSize(11).text('Foto da não conformidade:', contentX, sectionTop + 95);
+  const photoTitleY = observationsY + notesHeight + 16;
+  doc.fillColor('#374151').fontSize(11).text(
+    'Foto da não conformidade:',
+    contentX,
+    photoTitleY
+  );
+
+  const photoY = photoTitleY + 24;
 
   try {
-    const imageResponse = await axios.get(item.photoUrl, { responseType: 'arraybuffer' });
-    const imageBuffer = Buffer.from(imageResponse.data, 'binary');
+    const imageBuffer = await getImageBuffer(item.photoUrl);
+
+    if (!imageBuffer) {
+      throw new Error('Imagem não encontrada.');
+    }
+
     const photoWidth = 320;
     const photoHeight = 220;
     const photoX = 40 + (515 - photoWidth) / 2;
-    const photoY = sectionTop + 120;
 
     doc.image(imageBuffer, photoX, photoY, {
       fit: [photoWidth, photoHeight],
-      align: 'center'
+      align: 'center',
+      valign: 'center',
     });
   } catch (error) {
     doc.fillColor('#991b1b').fontSize(10).text(
       'Não foi possível carregar a foto deste item.',
       contentX,
-      sectionTop + 130
+      photoY + 10
     );
     doc.fillColor('#111827');
   }
 
-  doc.y = sectionTop + 372;
+  doc.y = sectionTop + sectionHeight + 10;
 }
 
 function drawSignaturesBlock(doc, inspection) {
-  ensurePageSpace(doc, 200);
+  ensurePageSpace(doc, 210);
 
   doc.fontSize(14).fillColor('#111827').text('Assinaturas', 40, doc.y, {
     width: 515,
     align: 'center',
-    underline: true
+    underline: true,
   });
 
   doc.y += 30;
@@ -234,8 +337,13 @@ function drawSignaturesBlock(doc, inspection) {
   const lineOffset = 108;
   const nameOffset = 116;
 
-  doc.fontSize(12).text('Assinatura do vistoriador:', leftX, titleY, { width: boxWidth });
-  doc.text('Assinatura do cliente:', rightX, titleY, { width: boxWidth });
+  doc.fontSize(12).text('Assinatura do vistoriador:', leftX, titleY, {
+    width: boxWidth,
+  });
+  doc.text('Assinatura do cliente:', rightX, titleY, {
+    width: boxWidth,
+  });
+
   doc.rect(leftX, boxY, boxWidth, boxHeight).stroke();
   doc.rect(rightX, boxY, boxWidth, boxHeight).stroke();
 
@@ -245,16 +353,19 @@ function drawSignaturesBlock(doc, inspection) {
       doc.image(inspectorBuffer, leftX + 12, boxY + 10, {
         fit: [boxWidth - 24, boxHeight - 24],
         align: 'center',
-        valign: 'center'
+        valign: 'center',
       });
     } catch (error) {
       doc.fontSize(10).text('Assinatura inválida', leftX, boxY + 38, {
         width: boxWidth,
-        align: 'center'
+        align: 'center',
       });
     }
   } else {
-    doc.fontSize(10).text('Não informada', leftX, boxY + 38, { width: boxWidth, align: 'center' });
+    doc.fontSize(10).text('Não informada', leftX, boxY + 38, {
+      width: boxWidth,
+      align: 'center',
+    });
   }
 
   const clientBuffer = extractBase64Image(inspection.clientSignature);
@@ -263,22 +374,33 @@ function drawSignaturesBlock(doc, inspection) {
       doc.image(clientBuffer, rightX + 12, boxY + 10, {
         fit: [boxWidth - 24, boxHeight - 24],
         align: 'center',
-        valign: 'center'
+        valign: 'center',
       });
     } catch (error) {
       doc.fontSize(10).text('Assinatura inválida', rightX, boxY + 38, {
         width: boxWidth,
-        align: 'center'
+        align: 'center',
       });
     }
   } else {
-    doc.fontSize(10).text('Não informada', rightX, boxY + 38, { width: boxWidth, align: 'center' });
+    doc.fontSize(10).text('Não informada', rightX, boxY + 38, {
+      width: boxWidth,
+      align: 'center',
+    });
   }
 
   doc.moveTo(leftX, boxY + lineOffset).lineTo(leftX + boxWidth, boxY + lineOffset).stroke();
   doc.moveTo(rightX, boxY + lineOffset).lineTo(rightX + boxWidth, boxY + lineOffset).stroke();
-  doc.fontSize(10).text('Vistoriador', leftX, boxY + nameOffset, { width: boxWidth, align: 'center' });
-  doc.text('Cliente', rightX, boxY + nameOffset, { width: boxWidth, align: 'center' });
+
+  doc.fontSize(10).text('Vistoriador', leftX, boxY + nameOffset, {
+    width: boxWidth,
+    align: 'center',
+  });
+  doc.text('Cliente', rightX, boxY + nameOffset, {
+    width: boxWidth,
+    align: 'center',
+  });
+
   doc.y = boxY + 138;
 }
 
@@ -286,7 +408,7 @@ class ReportService {
   async generateInspectionReport(res, inspection) {
     const doc = new PDFDocument({
       margin: 40,
-      size: 'A4'
+      size: 'A4',
     });
 
     const fileName = `vistoria-${inspection.apartment.number}-${inspection.id}.pdf`;
