@@ -38,7 +38,7 @@ class InspectionController {
 
   async generateReport(req, res) {
     const inspection = await inspectionService.getById(req.params.id);
-    await reportService.generateInspectionReport(res, inspection);
+    await reportService.generateInspectionReport(req, res, inspection);
   }
 }
 
