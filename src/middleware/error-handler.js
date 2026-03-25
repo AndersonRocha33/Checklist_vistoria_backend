@@ -8,7 +8,7 @@ function errorHandler(error, req, res, next) {
   const statusCode = error.statusCode || 500;
 
   return res.status(statusCode).json({
-    message: statusCode === 500 ? 'Erro interno do servidor.' : error.message
+    message: statusCode === 500 ? 'Erro interno do servidor.' : error.message,
   });
 }
 

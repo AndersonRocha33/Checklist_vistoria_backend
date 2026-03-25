@@ -6,31 +6,35 @@ class AuthService {
   async register(data) {
     const { name, email, password } = data;
 
-    const emailNormalizado = email.trim().toLowerCase();
+    const normalizedName = String(name || '').trim();
+    const normalizedEmail = String(email || '').trim().toLowerCase();
+    const normalizedPassword = String(password || '').trim();
 
-    const usuarioExistente = await prisma.user.findUnique({
-      where: { email: emailNormalizado }
+    const existingUser = await prisma.user.findUnique({
+      where: {
+        email: normalizedEmail,
+      },
     });
 
-    if (usuarioExistente) {
+    if (existingUser) {
       const error = new Error('Já existe um usuário com este e-mail.');
       error.statusCode = 400;
       throw error;
     }
 
-    const senhaHash = await bcrypt.hash(password, 10);
+    const hashedPassword = await bcrypt.hash(normalizedPassword, 10);
 
     const user = await prisma.user.create({
       data: {
-        name: name.trim(),
-        email: emailNormalizado,
-        password: senhaHash
-      }
+        name: normalizedName,
+        email: normalizedEmail,
+        password: hashedPassword,
+      },
     });
 
     const token = tokenService.generateToken({
       id: user.id,
-      email: user.email
+      email: user.email,
     });
 
     return {
@@ -39,18 +43,21 @@ class AuthService {
       user: {
         id: user.id,
         nome: user.name,
-        email: user.email
-      }
+        email: user.email,
+      },
     };
   }
 
   async login(data) {
     const { email, password } = data;
 
-    const emailNormalizado = email.trim().toLowerCase();
+    const normalizedEmail = String(email || '').trim().toLowerCase();
+    const normalizedPassword = String(password || '').trim();
 
     const user = await prisma.user.findUnique({
-      where: { email: emailNormalizado }
+      where: {
+        email: normalizedEmail,
+      },
     });
 
     if (!user) {
@@ -59,9 +66,12 @@ class AuthService {
       throw error;
     }
 
-    const senhaValida = await bcrypt.compare(password, user.password);
+    const passwordMatch = await bcrypt.compare(
+      normalizedPassword,
+      user.password
+    );
 
-    if (!senhaValida) {
+    if (!passwordMatch) {
       const error = new Error('E-mail ou senha inválidos.');
       error.statusCode = 401;
       throw error;
@@ -69,7 +79,7 @@ class AuthService {
 
     const token = tokenService.generateToken({
       id: user.id,
-      email: user.email
+      email: user.email,
     });
 
     return {
@@ -78,8 +88,8 @@ class AuthService {
       user: {
         id: user.id,
         nome: user.name,
-        email: user.email
-      }
+        email: user.email,
+      },
     };
   }
 }

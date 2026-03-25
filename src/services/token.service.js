@@ -1,33 +1,28 @@
 const jwt = require('jsonwebtoken');
-const { UnauthorizedError } = require('../errors/http-errors');
 
 class TokenService {
   getSecret() {
-    if (!process.env.JWT_SECRET) {
+    const secret = process.env.JWT_SECRET;
+
+    if (!secret) {
       throw new Error('JWT_SECRET não configurado.');
     }
 
-    return process.env.JWT_SECRET;
+    return secret;
   }
 
-  sign(user) {
-    return jwt.sign(
-      {
-        id: user.id,
-        name: user.name,
-        email: user.email
-      },
-      this.getSecret(),
-      { expiresIn: '1d' }
-    );
+  generateToken(payload) {
+    const secret = this.getSecret();
+
+    return jwt.sign(payload, secret, {
+      expiresIn: '7d',
+    });
   }
 
-  verify(token) {
-    try {
-      return jwt.verify(token, this.getSecret());
-    } catch (error) {
-      throw new UnauthorizedError('Token inválido.');
-    }
+  verifyToken(token) {
+    const secret = this.getSecret();
+
+    return jwt.verify(token, secret);
   }
 }
 
