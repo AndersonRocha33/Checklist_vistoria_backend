@@ -14,17 +14,33 @@ const app = express();
 const allowedOrigins = [
   process.env.APP_URL,
   'http://localhost:5173',
-  'http://localhost:5174'
+  'http://localhost:5174',
+  'http://127.0.0.1:5173',
+  'http://127.0.0.1:5174'
 ].filter(Boolean);
 
 app.use(
   cors({
     origin(origin, callback) {
-      if (!origin) return callback(null, true);
+      // requests sem origin (Postman, healthcheck, navegador direto)
+      if (!origin) {
+        return callback(null, true);
+      }
 
+      // aceita origens cadastradas explicitamente
       if (allowedOrigins.includes(origin)) {
         return callback(null, true);
       }
+
+      // aceita previews/produção do Vercel
+      if (
+        origin.endsWith('.vercel.app') &&
+        origin.includes('checklist-vistoria')
+      ) {
+        return callback(null, true);
+      }
+
+      console.error('Origem bloqueada pelo CORS:', origin);
 
       return callback(new Error('Origem não permitida pelo CORS.'));
     },
