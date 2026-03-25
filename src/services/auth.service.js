@@ -4,7 +4,7 @@ const tokenService = require('./token.service');
 
 class AuthService {
   async register(data) {
-    const { nome, email, senha } = data;
+    const { name, email, password } = data;
 
     const emailNormalizado = email.trim().toLowerCase();
 
@@ -18,11 +18,11 @@ class AuthService {
       throw error;
     }
 
-    const senhaHash = await bcrypt.hash(senha, 10);
+    const senhaHash = await bcrypt.hash(password, 10);
 
     const user = await prisma.user.create({
       data: {
-        name: nome.trim(),
+        name: name.trim(),
         email: emailNormalizado,
         password: senhaHash
       }
@@ -45,7 +45,7 @@ class AuthService {
   }
 
   async login(data) {
-    const { email, senha } = data;
+    const { email, password } = data;
 
     const emailNormalizado = email.trim().toLowerCase();
 
@@ -59,16 +59,12 @@ class AuthService {
       throw error;
     }
 
-    const senhaValida = await bcrypt.compare(senha, user.password);
+    const senhaValida = await bcrypt.compare(password, user.password);
 
     if (!senhaValida) {
       const error = new Error('E-mail ou senha inválidos.');
       error.statusCode = 401;
       throw error;
-    }
-
-    if (!tokenService || typeof tokenService.generateToken !== 'function') {
-      throw new Error('tokenService.generateToken não está disponível.');
     }
 
     const token = tokenService.generateToken({
