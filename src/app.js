@@ -22,26 +22,19 @@ const allowedOrigins = [
 app.use(
   cors({
     origin(origin, callback) {
-      // requests sem origin (Postman, healthcheck, navegador direto)
       if (!origin) {
         return callback(null, true);
       }
 
-      // aceita origens cadastradas explicitamente
       if (allowedOrigins.includes(origin)) {
         return callback(null, true);
       }
 
-      // aceita previews/produção do Vercel
-      if (
-        origin.endsWith('.vercel.app') &&
-        origin.includes('checklist-vistoria')
-      ) {
+      if (origin.endsWith('.vercel.app')) {
         return callback(null, true);
       }
 
       console.error('Origem bloqueada pelo CORS:', origin);
-
       return callback(new Error('Origem não permitida pelo CORS.'));
     },
     credentials: true
