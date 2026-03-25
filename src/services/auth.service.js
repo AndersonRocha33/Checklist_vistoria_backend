@@ -67,6 +67,10 @@ class AuthService {
       throw error;
     }
 
+    if (!tokenService || typeof tokenService.generateToken !== 'function') {
+      throw new Error('tokenService.generateToken não está disponível.');
+    }
+
     const token = tokenService.generateToken({
       id: user.id,
       email: user.email

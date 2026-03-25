@@ -1,37 +1,14 @@
-const AppError = require('../errors/app-error');
-
 function errorHandler(error, req, res, next) {
-  if (res.headersSent) {
-    return next(error);
-  }
+  console.error('=== ERRO INTERNO ===');
+  console.error('Rota:', req.method, req.originalUrl);
+  console.error('Body:', req.body);
+  console.error('Mensagem:', error.message);
+  console.error('Stack:', error.stack);
 
-  if (error instanceof AppError) {
-    return res.status(error.statusCode).json({
-      message: error.message,
-      code: error.code,
-      details: error.details || undefined
-    });
-  }
+  const statusCode = error.statusCode || 500;
 
-  if (error?.code === 'P2002') {
-    return res.status(409).json({
-      message: 'Conflito de dados.',
-      code: 'CONFLICT'
-    });
-  }
-
-  if (error?.code === 'P2025') {
-    return res.status(404).json({
-      message: 'Recurso não encontrado.',
-      code: 'NOT_FOUND'
-    });
-  }
-
-  console.error(error);
-
-  return res.status(500).json({
-    message: 'Erro interno do servidor.',
-    code: 'INTERNAL_ERROR'
+  return res.status(statusCode).json({
+    message: statusCode === 500 ? 'Erro interno do servidor.' : error.message
   });
 }
 
