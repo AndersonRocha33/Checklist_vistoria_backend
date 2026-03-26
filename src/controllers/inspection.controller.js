@@ -37,8 +37,19 @@ class InspectionController {
   }
 
   async generateReport(req, res) {
-    const inspection = await inspectionService.getById(req.params.id);
-    await reportService.generateInspectionReport(req, res, inspection);
+    try {
+      const inspection = await inspectionService.getById(req.params.id);
+      await reportService.generateInspectionReport(res, inspection);
+    } catch (error) {
+      console.error('=== ERRO AO GERAR RELATÓRIO ===');
+      console.error('Inspection ID:', req.params.id);
+      console.error('Mensagem:', error.message);
+      console.error('Stack:', error.stack);
+
+      return res.status(500).json({
+        message: 'Erro ao gerar relatório.'
+      });
+    }
   }
 }
 
