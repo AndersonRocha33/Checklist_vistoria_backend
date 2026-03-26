@@ -34,7 +34,7 @@ function groupItemsByLocation(items) {
           b.checklistItem.itemName || '',
           'pt-BR'
         )
-      )
+      ),
     }));
 }
 
@@ -43,7 +43,7 @@ function getInspectionMetrics(items) {
     total: items.length,
     conforme: items.filter((item) => item.status === 'CONFORME').length,
     naoConforme: items.filter((item) => item.status === 'NAO_CONFORME').length,
-    pendente: items.filter((item) => item.status === 'PENDENTE').length
+    pendente: items.filter((item) => item.status === 'PENDENTE').length,
   };
 }
 
@@ -72,7 +72,7 @@ function drawHeaderBlock(doc, inspection) {
     .fillColor('#111827')
     .text('Relatório de Checklist de Entrega', hasLogo ? 170 : 40, 42, {
       width: 360,
-      align: 'left'
+      align: 'left',
     });
 
   doc
@@ -80,7 +80,7 @@ function drawHeaderBlock(doc, inspection) {
     .fillColor('#6b7280')
     .text('Relatório de vistoria do apartamento decorado', hasLogo ? 170 : 40, 72, {
       width: 360,
-      align: 'left'
+      align: 'left',
     });
 
   doc.roundedRect(40, 110, 515, 88, 12).fillAndStroke('#f8fafc', '#dbeafe');
@@ -112,7 +112,7 @@ function drawMetricsBlock(doc, metrics) {
     { label: 'Total de itens', value: metrics.total, color: '#eff6ff', border: '#bfdbfe' },
     { label: 'Conformes', value: metrics.conforme, color: '#ecfdf5', border: '#bbf7d0' },
     { label: 'Não conformes', value: metrics.naoConforme, color: '#fff7ed', border: '#fdba74' },
-    { label: 'Pendentes', value: metrics.pendente, color: '#fefce8', border: '#fde68a' }
+    { label: 'Pendentes', value: metrics.pendente, color: '#fefce8', border: '#fde68a' },
   ];
 
   cards.forEach((card, index) => {
@@ -122,12 +122,12 @@ function drawMetricsBlock(doc, metrics) {
 
     doc.fillColor('#6b7280').fontSize(10).text(card.label, x + 10, startY + 12, {
       width: boxWidth - 20,
-      align: 'center'
+      align: 'center',
     });
 
     doc.fillColor('#111827').fontSize(24).text(String(card.value), x + 10, startY + 32, {
       width: boxWidth - 20,
-      align: 'center'
+      align: 'center',
     });
   });
 
@@ -153,7 +153,7 @@ function drawStatusBadge(doc, status, x, y, width = 115) {
   doc.roundedRect(x, y, width, 22, 8).fillAndStroke(colors.bg, colors.border);
   doc.fillColor(colors.text).fontSize(10).text(status, x, y + 6, {
     width,
-    align: 'center'
+    align: 'center',
   });
   doc.fillColor('#111827');
 }
@@ -168,53 +168,44 @@ function drawLocationTitle(doc, location) {
   doc.y = startY + 40;
 }
 
-function getBaseUrlFromRequest(req) {
-  const forwardedProto = req.headers['x-forwarded-proto'];
-  const protocol =
-    forwardedProto && typeof forwardedProto === 'string'
-      ? forwardedProto.split(',')[0]
-      : req.protocol;
-
-  return `${protocol}://${req.get('host')}`;
-}
-
-function buildAbsolutePhotoUrl(req, photoUrl) {
+function normalizePhotoUrl(photoUrl) {
   if (!photoUrl || typeof photoUrl !== 'string') return null;
 
-  if (photoUrl.startsWith('data:image/')) {
-    return photoUrl;
+  let normalized = photoUrl.trim();
+
+  if (normalized.startsWith('http://')) {
+    normalized = normalized.replace(/^http:\/\//i, 'https://');
   }
 
-  if (photoUrl.startsWith('http://') || photoUrl.startsWith('https://')) {
-    return photoUrl;
-  }
-
-  const normalized = photoUrl.startsWith('/') ? photoUrl : `/${photoUrl}`;
-  return `${getBaseUrlFromRequest(req)}${normalized}`;
+  return normalized;
 }
 
-async function getImageBuffer(req, photoUrl) {
+async function getImageBuffer(photoUrl) {
   if (!photoUrl || typeof photoUrl !== 'string') {
     return null;
   }
 
-  const base64Buffer = extractBase64Image(photoUrl);
+  const normalizedUrl = normalizePhotoUrl(photoUrl);
+
+  const base64Buffer = extractBase64Image(normalizedUrl);
   if (base64Buffer) {
     return base64Buffer;
   }
 
-  const absoluteUrl = buildAbsolutePhotoUrl(req, photoUrl);
-
-  if (absoluteUrl && (absoluteUrl.startsWith('http://') || absoluteUrl.startsWith('https://'))) {
-    const response = await axios.get(absoluteUrl, {
+  if (
+    normalizedUrl.startsWith('http://') ||
+    normalizedUrl.startsWith('https://')
+  ) {
+    const response = await axios.get(normalizedUrl, {
       responseType: 'arraybuffer',
-      timeout: 15000
+      timeout: 15000,
+      maxRedirects: 5,
     });
 
     return Buffer.from(response.data);
   }
 
-  const normalizedPath = photoUrl.replace(/\\/g, '/');
+  const normalizedPath = normalizedUrl.replace(/\\/g, '/');
 
   if (
     normalizedPath.startsWith('/uploads/') ||
@@ -239,13 +230,13 @@ function getItemSectionHeight(doc, item, hasPhoto) {
   doc.fontSize(13);
   const itemNameHeight = doc.heightOfString(itemName, {
     width: contentWidth,
-    align: 'left'
+    align: 'left',
   });
 
   doc.fontSize(11);
   const notesHeight = doc.heightOfString(notesText, {
     width: 470,
-    align: 'left'
+    align: 'left',
   });
 
   const baseHeight = 26 + itemNameHeight + 12 + 18 + 8 + notesHeight + 18;
@@ -257,7 +248,7 @@ function getItemSectionHeight(doc, item, hasPhoto) {
   return Math.max(360, baseHeight + 245);
 }
 
-async function drawItemSection(doc, req, item) {
+async function drawItemSection(doc, item) {
   const hasPhoto = item.status === 'NAO_CONFORME' && item.photoUrl;
   const sectionHeight = getItemSectionHeight(doc, item, hasPhoto);
 
@@ -274,14 +265,14 @@ async function drawItemSection(doc, req, item) {
 
   doc.fillColor('#111827').fontSize(13).text(itemName, contentX, sectionTop + 14, {
     width: contentWidth,
-    align: 'left'
+    align: 'left',
   });
 
   drawStatusBadge(doc, item.status, badgeX, sectionTop + 14, badgeWidth);
 
   const itemNameHeight = doc.heightOfString(itemName, {
     width: contentWidth,
-    align: 'left'
+    align: 'left',
   });
 
   const detailY = sectionTop + 18 + itemNameHeight + 14;
@@ -294,12 +285,12 @@ async function drawItemSection(doc, req, item) {
 
   doc.text(notesText, contentX, observationsY, {
     width: 470,
-    align: 'left'
+    align: 'left',
   });
 
   const notesHeight = doc.heightOfString(notesText, {
     width: 470,
-    align: 'left'
+    align: 'left',
   });
 
   if (!hasPhoto) {
@@ -317,7 +308,7 @@ async function drawItemSection(doc, req, item) {
   const photoY = photoTitleY + 24;
 
   try {
-    const imageBuffer = await getImageBuffer(req, item.photoUrl);
+    const imageBuffer = await getImageBuffer(item.photoUrl);
 
     if (!imageBuffer) {
       throw new Error('Imagem não encontrada.');
@@ -330,7 +321,7 @@ async function drawItemSection(doc, req, item) {
     doc.image(imageBuffer, photoX, photoY, {
       fit: [photoWidth, photoHeight],
       align: 'center',
-      valign: 'center'
+      valign: 'center',
     });
   } catch (error) {
     doc.fillColor('#991b1b').fontSize(10).text(
@@ -350,7 +341,7 @@ function drawSignaturesBlock(doc, inspection) {
   doc.fontSize(14).fillColor('#111827').text('Assinaturas', 40, doc.y, {
     width: 515,
     align: 'center',
-    underline: true
+    underline: true,
   });
 
   doc.y += 30;
@@ -365,10 +356,10 @@ function drawSignaturesBlock(doc, inspection) {
   const nameOffset = 116;
 
   doc.fontSize(12).text('Assinatura do vistoriador:', leftX, titleY, {
-    width: boxWidth
+    width: boxWidth,
   });
   doc.text('Assinatura do cliente:', rightX, titleY, {
-    width: boxWidth
+    width: boxWidth,
   });
 
   doc.rect(leftX, boxY, boxWidth, boxHeight).stroke();
@@ -380,18 +371,18 @@ function drawSignaturesBlock(doc, inspection) {
       doc.image(inspectorBuffer, leftX + 12, boxY + 10, {
         fit: [boxWidth - 24, boxHeight - 24],
         align: 'center',
-        valign: 'center'
+        valign: 'center',
       });
     } catch (error) {
       doc.fontSize(10).text('Assinatura inválida', leftX, boxY + 38, {
         width: boxWidth,
-        align: 'center'
+        align: 'center',
       });
     }
   } else {
     doc.fontSize(10).text('Não informada', leftX, boxY + 38, {
       width: boxWidth,
-      align: 'center'
+      align: 'center',
     });
   }
 
@@ -401,18 +392,18 @@ function drawSignaturesBlock(doc, inspection) {
       doc.image(clientBuffer, rightX + 12, boxY + 10, {
         fit: [boxWidth - 24, boxHeight - 24],
         align: 'center',
-        valign: 'center'
+        valign: 'center',
       });
     } catch (error) {
       doc.fontSize(10).text('Assinatura inválida', rightX, boxY + 38, {
         width: boxWidth,
-        align: 'center'
+        align: 'center',
       });
     }
   } else {
     doc.fontSize(10).text('Não informada', rightX, boxY + 38, {
       width: boxWidth,
-      align: 'center'
+      align: 'center',
     });
   }
 
@@ -421,21 +412,21 @@ function drawSignaturesBlock(doc, inspection) {
 
   doc.fontSize(10).text('Vistoriador', leftX, boxY + nameOffset, {
     width: boxWidth,
-    align: 'center'
+    align: 'center',
   });
   doc.text('Cliente', rightX, boxY + nameOffset, {
     width: boxWidth,
-    align: 'center'
+    align: 'center',
   });
 
   doc.y = boxY + 138;
 }
 
 class ReportService {
-  async generateInspectionReport(req, res, inspection) {
+  async generateInspectionReport(res, inspection) {
     const doc = new PDFDocument({
       margin: 40,
-      size: 'A4'
+      size: 'A4',
     });
 
     const fileName = `vistoria-${inspection.apartment.number}-${inspection.id}.pdf`;
@@ -454,7 +445,7 @@ class ReportService {
       drawLocationTitle(doc, group.location);
 
       for (const item of group.items) {
-        await drawItemSection(doc, req, item);
+        await drawItemSection(doc, item);
       }
 
       doc.y += 4;
