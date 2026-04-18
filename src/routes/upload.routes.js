@@ -14,19 +14,44 @@ if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
 
+function sanitizeFileName(fileName) {
+  const ext = path.extname(fileName || '');
+  const baseName = path.basename(fileName || 'arquivo', ext);
+
+  const safeBaseName = baseName
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z0-9-_]/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+
+  return `${Date.now()}-${safeBaseName || 'arquivo'}${ext || ''}`;
+}
+
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, uploadDir);
   },
   filename: (req, file, cb) => {
-    const uniqueName = `${Date.now()}-${file.originalname.replace(/\s+/g, '-')}`;
+    const uniqueName = sanitizeFileName(file.originalname);
     cb(null, uniqueName);
-  }
+  },
 });
 
 const upload = multer({ storage });
 
-router.post('/', authMiddleware, upload.single('file'), asyncHandler(uploadController.uploadFile));
-router.post('/csv', authMiddleware, upload.single('file'), asyncHandler(uploadController.importChecklistCsv));
+router.post(
+  '/',
+  authMiddleware,
+  upload.single('file'),
+  asyncHandler(uploadController.uploadFile)
+);
+
+router.post(
+  '/csv',
+  authMiddleware,
+  upload.single('file'),
+  asyncHandler(uploadController.importChecklistCsv)
+);
 
 module.exports = router;

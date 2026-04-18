@@ -71,13 +71,31 @@ function parseCsvContent(fileBuffer) {
   throw lastError || new Error('Não foi possível ler o CSV.');
 }
 
+function getPublicBaseUrl(req) {
+  const forwardedProto = req.headers['x-forwarded-proto'];
+  const forwardedHost = req.headers['x-forwarded-host'];
+
+  const protocol =
+    typeof forwardedProto === 'string' && forwardedProto.length > 0
+      ? forwardedProto.split(',')[0].trim()
+      : req.protocol;
+
+  const host =
+    typeof forwardedHost === 'string' && forwardedHost.length > 0
+      ? forwardedHost.split(',')[0].trim()
+      : req.get('host');
+
+  return `${protocol}://${host}`;
+}
+
 class UploadService {
   uploadFile(req) {
     if (!req.file) {
       throw new ValidationError('Arquivo não enviado.');
     }
 
-    const fileUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
+    const publicBaseUrl = getPublicBaseUrl(req);
+    const fileUrl = `${publicBaseUrl}/uploads/${encodeURIComponent(req.file.filename)}`;
 
     return {
       message: 'Arquivo enviado com sucesso.',
@@ -100,6 +118,7 @@ class UploadService {
 
       const normalizedRows = [];
       let totalLinhasIgnoradas = 0;
+      const ownerId = req.user.id;
 
       for (const row of records) {
         const empreendimento = normalizeText(
@@ -145,7 +164,13 @@ class UploadService {
 
       const result = await prisma.$transaction(async (db) => {
         const uniqueEnterpriseNames = [...new Set(normalizedRows.map((row) => row.empreendimento))];
-        const existingEnterprises = await enterpriseRepository.findManyByNames(uniqueEnterpriseNames, db);
+
+        const existingEnterprises = await enterpriseRepository.findManyByNamesAndOwner(
+          uniqueEnterpriseNames,
+          ownerId,
+          db
+        );
+
         const enterpriseMap = new Map(existingEnterprises.map((enterprise) => [enterprise.name, enterprise]));
 
         let totalEnterprisesCreated = 0;
@@ -154,13 +179,21 @@ class UploadService {
 
         for (const enterpriseName of uniqueEnterpriseNames) {
           if (!enterpriseMap.has(enterpriseName)) {
-            const createdEnterprise = await enterpriseRepository.create({ name: enterpriseName }, db);
+            const createdEnterprise = await enterpriseRepository.create(
+              {
+                name: enterpriseName,
+                ownerId
+              },
+              db
+            );
+
             enterpriseMap.set(enterpriseName, createdEnterprise);
             totalEnterprisesCreated++;
           }
         }
 
-        const allApartments = await apartmentRepository.findAllWithEnterprise(db);
+        const allApartments = await apartmentRepository.findAllWithEnterpriseByOwner(ownerId, db);
+
         const apartmentMap = new Map(
           allApartments.map((apartment) => [`${apartment.enterprise.name}|||${apartment.number}`, apartment])
         );
@@ -179,6 +212,7 @@ class UploadService {
 
           if (!apartmentMap.has(apartmentKey)) {
             const enterprise = enterpriseMap.get(row.empreendimento);
+
             const createdApartment = await apartmentRepository.create(
               {
                 number: row.apartamento,
@@ -193,11 +227,14 @@ class UploadService {
         }
 
         const allChecklistItems = await checklistItemRepository.findAllWithApartmentAndEnterprise(db);
+
         const checklistItemMap = new Set(
-          allChecklistItems.map(
-            (item) =>
-              `${item.apartment.enterprise.name}|||${item.apartment.number}|||${item.location}|||${item.itemName}`
-          )
+          allChecklistItems
+            .filter((item) => item.apartment?.enterprise?.ownerId === ownerId)
+            .map(
+              (item) =>
+                `${item.apartment.enterprise.name}|||${item.apartment.number}|||${item.location}|||${item.itemName}`
+            )
         );
 
         const itemsToCreate = [];

@@ -5,15 +5,19 @@ class EnterpriseRepository {
     return db.enterprise.create({ data });
   }
 
-  list() {
+  listByOwner(ownerId) {
     return prisma.enterprise.findMany({
+      where: {
+        ownerId
+      },
       orderBy: { name: 'asc' }
     });
   }
 
-  findManyByNames(names, db = prisma) {
+  findManyByNamesAndOwner(names, ownerId, db = prisma) {
     return db.enterprise.findMany({
       where: {
+        ownerId,
         name: {
           in: names
         }
@@ -24,6 +28,15 @@ class EnterpriseRepository {
   findById(id) {
     return prisma.enterprise.findUnique({
       where: { id }
+    });
+  }
+
+  findByIdAndOwner(id, ownerId) {
+    return prisma.enterprise.findFirst({
+      where: {
+        id,
+        ownerId
+      }
     });
   }
 }

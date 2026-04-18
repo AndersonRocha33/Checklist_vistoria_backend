@@ -26,13 +26,19 @@ model User {
   password     String
   createdAt    DateTime     @default(now())
   inspections  Inspection[]
+  enterprises  Enterprise[]
 }
 
 model Enterprise {
   id           String       @id @default(uuid())
   name         String
+  ownerId      String?
+  owner        User?        @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   createdAt    DateTime     @default(now())
   apartments   Apartment[]
+
+  @@index([ownerId])
+  @@unique([name, ownerId])
 }
 
 model Apartment {

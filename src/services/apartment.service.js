@@ -3,11 +3,11 @@ const enterpriseRepository = require('../repositories/enterprise.repository');
 const { ConflictError, NotFoundError } = require('../errors/http-errors');
 
 class ApartmentService {
-  async create(data) {
-    const enterprise = await enterpriseRepository.findById(data.enterpriseId);
+  async create(data, userId) {
+    const enterprise = await enterpriseRepository.findByIdAndOwner(data.enterpriseId, userId);
 
     if (!enterprise) {
-      throw new NotFoundError('Empreendimento não encontrado.');
+      throw new NotFoundError('Empreendimento não encontrado para este usuário.');
     }
 
     const existingApartment = await apartmentRepository.findByComposite(
@@ -25,13 +25,23 @@ class ApartmentService {
     });
   }
 
-  async listAll() {
-    const apartments = await apartmentRepository.findAllWithInspectionSummary();
+  async listAll(userId) {
+    const apartments = await apartmentRepository.findAllWithInspectionSummaryByOwner(userId);
     return apartments.map((apartment) => this.mapApartment(apartment));
   }
 
-  async listByEnterprise(enterpriseId) {
-    const apartments = await apartmentRepository.findByEnterpriseWithInspectionSummary(enterpriseId);
+  async listByEnterprise(enterpriseId, userId) {
+    const enterprise = await enterpriseRepository.findByIdAndOwner(enterpriseId, userId);
+
+    if (!enterprise) {
+      throw new NotFoundError('Empreendimento não encontrado para este usuário.');
+    }
+
+    const apartments = await apartmentRepository.findByEnterpriseWithInspectionSummaryAndOwner(
+      enterpriseId,
+      userId
+    );
+
     return apartments.map((apartment) => this.mapApartment(apartment));
   }
 

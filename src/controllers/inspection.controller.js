@@ -39,7 +39,7 @@ class InspectionController {
   async generateReport(req, res) {
     try {
       const inspection = await inspectionService.getById(req.params.id);
-      await reportService.generateInspectionReport(res, inspection);
+      await reportService.generateInspectionReport(req, res, inspection);
     } catch (error) {
       console.error('=== ERRO AO GERAR RELATÓRIO ===');
       console.error('Inspection ID:', req.params.id);

@@ -435,7 +435,9 @@ class ReportService {
       size: 'A4'
     });
 
-    const fileName = `vistoria-${inspection.apartment.number}-${inspection.id}.pdf`;
+    const apartmentNumber = inspection?.apartment?.number || 'sem-numero';
+    const inspectionId = inspection?.id || 'sem-id';
+    const fileName = `vistoria-${apartmentNumber}-${inspectionId}.pdf`;
 
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
