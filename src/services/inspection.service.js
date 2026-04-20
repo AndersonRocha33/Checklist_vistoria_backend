@@ -6,10 +6,10 @@ const { NotFoundError, ValidationError } = require('../errors/http-errors');
 
 class InspectionService {
   async start({ apartmentId, userId }) {
-    let inspection = await inspectionRepository.findOpenByApartmentId(apartmentId);
+    const openInspection = await inspectionRepository.findOpenByApartmentId(apartmentId);
 
-    if (inspection) {
-      return inspection;
+    if (openInspection) {
+      return openInspection;
     }
 
     const latestInspection = await inspectionRepository.findLatestByApartmentId(apartmentId);
@@ -26,6 +26,12 @@ class InspectionService {
 
         return inspectionRepository.findDetailedById(latestInspection.id);
       }
+
+      if (latestInspection.status === 'CONCLUIDA' && !hasPendingItems) {
+        return latestInspection;
+      }
+
+      return latestInspection;
     }
 
     const createdInspection = await prisma.$transaction(async (db) => {
