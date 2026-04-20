@@ -183,20 +183,18 @@ function getStatusTextStyle(status) {
   return { color: '#8a6d1f', label: 'PENDENTE' };
 }
 
-function drawTableHeader(doc, startY) {
+function drawTableHeader(doc) {
   const startX = 40;
+  const startY = doc.y;
   const itemColWidth = 385;
   const qtyColWidth = 45;
   const statusColWidth = 85;
   const headerHeight = 18;
 
-  doc
-    .font('Helvetica-Bold')
-    .fontSize(8.5)
-    .fillColor('#444444')
-    .text('ITEM', startX + 8, startY + 5, {
-      width: itemColWidth - 12
-    });
+  doc.font('Helvetica-Bold').fontSize(8.5).fillColor('#444444');
+  doc.text('ITEM', startX + 8, startY + 5, {
+    width: itemColWidth - 12
+  });
 
   doc.text('QTDE', startX + itemColWidth, startY + 5, {
     width: qtyColWidth,
@@ -215,7 +213,7 @@ function drawTableHeader(doc, startY) {
     .stroke('#d9d9d9');
 
   doc.font('Helvetica').fillColor('#111111');
-  return startY + headerHeight + 2;
+  doc.y = startY + headerHeight + 2;
 }
 
 function getRowHeight(doc, itemName, width) {
@@ -226,63 +224,6 @@ function getRowHeight(doc, itemName, width) {
   });
 
   return Math.max(16, textHeight + 4);
-}
-
-function drawItemsTable(doc, items) {
-  const startX = 40;
-  const itemColWidth = 385;
-  const qtyColWidth = 45;
-  const statusColWidth = 85;
-
-  ensurePageSpace(doc, 28);
-  let y = drawTableHeader(doc, doc.y);
-
-  items.forEach((item, index) => {
-    const itemName = item.checklistItem.itemName || '-';
-    const rowHeight = getRowHeight(doc, itemName, itemColWidth - 16);
-    const minSpace = rowHeight + 8;
-
-    ensurePageSpace(doc, minSpace);
-
-    if (doc.y !== y) {
-      y = drawTableHeader(doc, doc.y);
-    }
-
-    if (index > 0) {
-      doc
-        .moveTo(startX, y - 2)
-        .lineTo(555, y - 2)
-        .lineWidth(0.5)
-        .stroke('#efefef');
-    }
-
-    doc.font('Helvetica').fontSize(8.5).fillColor('#111111');
-    doc.text(itemName, startX + 8, y + 1, {
-      width: itemColWidth - 16
-    });
-
-    doc.text(String(item.checklistItem.quantity || 0), startX + itemColWidth, y + 1, {
-      width: qtyColWidth,
-      align: 'center'
-    });
-
-    const statusStyle = getStatusTextStyle(item.status);
-    doc.font('Helvetica-Bold').fillColor(statusStyle.color).text(
-      statusStyle.label,
-      startX + itemColWidth + qtyColWidth,
-      y + 1,
-      {
-        width: statusColWidth,
-        align: 'center'
-      }
-    );
-
-    doc.fillColor('#111111');
-    y += rowHeight;
-    doc.y = y;
-  });
-
-  doc.y += 6;
 }
 
 function normalizePhotoUrl(photoUrl) {
@@ -334,80 +275,61 @@ async function getImageBuffer(photoUrl) {
   return null;
 }
 
-function getNonConformItemHeight(doc, item, hasPhoto) {
-  const titleWidth = 330;
-  const itemName = item.checklistItem.itemName || '-';
+function getInlineNonConformHeight(doc, item, hasPhoto) {
   const notesText = `Observações: ${item.notes || '-'}`;
 
-  doc.font('Helvetica-Bold').fontSize(11);
-  const titleHeight = doc.heightOfString(itemName, { width: titleWidth });
-
-  doc.font('Helvetica').fontSize(9.5);
-  const notesHeight = doc.heightOfString(notesText, { width: 455 });
-
-  const baseHeight = 22 + titleHeight + 10 + 14 + 6 + notesHeight + 12;
-
-  if (!hasPhoto) {
-    return Math.max(86, baseHeight + 6);
-  }
-
-  return Math.max(230, baseHeight + 140);
-}
-
-async function drawNonConformItem(doc, item) {
-  const hasPhoto = Boolean(item.photoUrl);
-  const sectionHeight = getNonConformItemHeight(doc, item, hasPhoto);
-
-  ensurePageSpace(doc, sectionHeight + 8);
-
-  const startX = 40;
-  const startY = doc.y;
-  const width = 515;
-  const titleWidth = 330;
-
-  doc
-    .lineWidth(0.8)
-    .roundedRect(startX, startY, width, sectionHeight, 8)
-    .stroke('#d9d9d9');
-
-  doc.font('Helvetica-Bold').fontSize(11).fillColor('#111111');
-  doc.text(item.checklistItem.itemName || '-', startX + 12, startY + 12, {
-    width: titleWidth
-  });
-
-  doc.font('Helvetica-Bold').fontSize(9).fillColor('#a61b1b');
-  doc.text('NAO_CONFORME', 430, startY + 13, {
-    width: 100,
-    align: 'center'
-  });
-
-  const titleHeight = doc.heightOfString(item.checklistItem.itemName || '-', {
-    width: titleWidth
-  });
-
-  let currentY = startY + 14 + titleHeight + 8;
-
-  doc.font('Helvetica').fontSize(9.5).fillColor('#111111');
-  doc.text(`Quantidade: ${item.checklistItem.quantity}`, startX + 12, currentY);
-
-  currentY += 16;
-
-  const notesText = `Observações: ${item.notes || '-'}`;
-  doc.text(notesText, startX + 12, currentY, {
-    width: 455
-  });
-
+  doc.font('Helvetica').fontSize(9.2);
   const notesHeight = doc.heightOfString(notesText, {
     width: 455
   });
 
-  currentY += notesHeight + 10;
+  const baseHeight = 16 + 14 + 6 + notesHeight + 10;
+
+  if (!hasPhoto) {
+    return Math.max(44, baseHeight);
+  }
+
+  return Math.max(170, baseHeight + 120);
+}
+
+async function drawInlineNonConformDetails(doc, item) {
+  const startX = 58;
+  const width = 480;
+  const hasPhoto = Boolean(item.photoUrl);
+  const blockHeight = getInlineNonConformHeight(doc, item, hasPhoto);
+
+  ensurePageSpace(doc, blockHeight + 4);
+
+  const startY = doc.y;
+
+  doc
+    .lineWidth(0.6)
+    .roundedRect(startX, startY, width, blockHeight, 6)
+    .stroke('#e4e4e4');
+
+  let currentY = startY + 10;
+
+  doc.font('Helvetica').fontSize(9.2).fillColor('#111111');
+  doc.text(`Quantidade: ${item.checklistItem.quantity}`, startX + 10, currentY);
+
+  currentY += 16;
+
+  const notesText = `Observações: ${item.notes || '-'}`;
+  doc.text(notesText, startX + 10, currentY, {
+    width: width - 20
+  });
+
+  const notesHeight = doc.heightOfString(notesText, {
+    width: width - 20
+  });
+
+  currentY += notesHeight + 8;
 
   if (hasPhoto) {
-    doc.font('Helvetica').fontSize(9.5).fillColor('#444444');
-    doc.text('Foto da não conformidade:', startX + 12, currentY);
+    doc.font('Helvetica').fontSize(9).fillColor('#444444');
+    doc.text('Foto da não conformidade:', startX + 10, currentY);
 
-    currentY += 16;
+    currentY += 14;
 
     try {
       const imageBuffer = await getImageBuffer(item.photoUrl);
@@ -416,8 +338,8 @@ async function drawNonConformItem(doc, item) {
         throw new Error('Imagem não encontrada ou vazia.');
       }
 
-      const photoWidth = 210;
-      const photoHeight = 125;
+      const photoWidth = 180;
+      const photoHeight = 100;
       const photoX = startX + (width - photoWidth) / 2;
 
       doc.image(imageBuffer, photoX, currentY, {
@@ -429,29 +351,83 @@ async function drawNonConformItem(doc, item) {
       console.error('Erro ao carregar imagem no relatório:', error.message);
       console.error('URL da imagem:', item.photoUrl);
 
-      doc.font('Helvetica').fillColor('#a61b1b').fontSize(9).text(
+      doc.font('Helvetica').fillColor('#a61b1b').fontSize(8.5).text(
         'Não foi possível carregar a foto deste item.',
-        startX + 12,
-        currentY + 6
+        startX + 10,
+        currentY + 4
       );
       doc.fillColor('#111111');
     }
   }
 
-  doc.y = startY + sectionHeight + 8;
+  doc.y = startY + blockHeight + 4;
 }
 
 async function drawLocationSection(doc, group) {
   drawLocationTitle(doc, group.location);
-  drawItemsTable(doc, group.items);
+  drawTableHeader(doc);
 
-  const nonConformItems = group.items.filter((item) => item.status === 'NAO_CONFORME');
+  const startX = 40;
+  const itemColWidth = 385;
+  const qtyColWidth = 45;
+  const statusColWidth = 85;
 
-  for (const item of nonConformItems) {
-    await drawNonConformItem(doc, item);
+  for (const item of group.items) {
+    const itemName = item.checklistItem.itemName || '-';
+    const rowHeight = getRowHeight(doc, itemName, itemColWidth - 16);
+    const isNonConform = item.status === 'NAO_CONFORME';
+    const detailsHeight = isNonConform
+      ? getInlineNonConformHeight(doc, item, Boolean(item.photoUrl)) + 4
+      : 0;
+
+    const minSpace = rowHeight + detailsHeight + 4;
+
+    ensurePageSpace(doc, minSpace);
+
+    if (doc.y + minSpace > doc.page.height - doc.page.margins.bottom) {
+      doc.addPage();
+      drawLocationTitle(doc, group.location);
+      drawTableHeader(doc);
+    }
+
+    const y = doc.y;
+    const statusStyle = getStatusTextStyle(item.status);
+
+    doc
+      .moveTo(startX, y - 2)
+      .lineTo(555, y - 2)
+      .lineWidth(0.5)
+      .stroke('#efefef');
+
+    doc.font('Helvetica').fontSize(8.5).fillColor('#111111');
+    doc.text(itemName, startX + 8, y + 1, {
+      width: itemColWidth - 16
+    });
+
+    doc.text(String(item.checklistItem.quantity || 0), startX + itemColWidth, y + 1, {
+      width: qtyColWidth,
+      align: 'center'
+    });
+
+    doc.font('Helvetica-Bold').fillColor(statusStyle.color).text(
+      statusStyle.label,
+      startX + itemColWidth + qtyColWidth,
+      y + 1,
+      {
+        width: statusColWidth,
+        align: 'center'
+      }
+    );
+
+    doc.fillColor('#111111');
+    doc.y = y + rowHeight;
+
+    if (isNonConform) {
+      await drawInlineNonConformDetails(doc, item);
+    }
   }
 
-  doc.y += 4;
+  doc.y += 6;
 }
 
 function drawSignaturesBlock(doc, inspection) {
