@@ -39,6 +39,12 @@ class EnterpriseRepository {
       }
     });
   }
+
+  deleteById(id, db = prisma) {
+    return db.enterprise.delete({
+      where: { id }
+    });
+  }
 }
 
 module.exports = new EnterpriseRepository();

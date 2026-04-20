@@ -13,6 +13,17 @@ router.post(
   validate(createEnterpriseSchema),
   asyncHandler(enterpriseController.create)
 );
-router.get('/', authMiddleware, asyncHandler(enterpriseController.list));
+
+router.get(
+  '/',
+  authMiddleware,
+  asyncHandler(enterpriseController.list)
+);
+
+router.delete(
+  '/:id',
+  authMiddleware,
+  asyncHandler(enterpriseController.remove)
+);
 
 module.exports = router;

@@ -22,6 +22,16 @@ class EnterpriseService {
 
     return enterprise;
   }
+
+  async remove(enterpriseId, userId) {
+    const enterprise = await this.findOwnedEnterpriseOrThrow(enterpriseId, userId);
+
+    await enterpriseRepository.deleteById(enterprise.id);
+
+    return {
+      message: 'Empreendimento excluído com sucesso.'
+    };
+  }
 }
 
 module.exports = new EnterpriseService();

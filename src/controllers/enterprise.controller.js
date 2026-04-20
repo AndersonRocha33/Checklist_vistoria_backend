@@ -10,6 +10,11 @@ class EnterpriseController {
     const enterprises = await enterpriseService.list(req.user.id);
     return res.json(enterprises);
   }
+
+  async remove(req, res) {
+    const result = await enterpriseService.remove(req.params.id, req.user.id);
+    return res.json(result);
+  }
 }
 
 module.exports = new EnterpriseController();
