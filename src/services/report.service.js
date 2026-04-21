@@ -62,7 +62,7 @@ function drawHeaderBlock(doc, inspection) {
   if (hasLogo) {
     try {
       doc.image(logoPath, 40, 34, {
-        fit: [160, 60],
+        fit: [150, 56],
         align: 'left'
       });
     } catch (error) {
@@ -73,74 +73,86 @@ function drawHeaderBlock(doc, inspection) {
   doc
     .strokeColor('#d1d5db')
     .lineWidth(1)
-    .moveTo(210, 35)
-    .lineTo(210, 88)
+    .moveTo(205, 38)
+    .lineTo(205, 92)
     .stroke();
 
   doc
     .font('Helvetica-Bold')
-    .fontSize(22)
+    .fontSize(19)
     .fillColor('#111827')
-    .text('Relatório de Checklist de Entrega', 230, 42, {
-      width: 300,
-      align: 'left'
+    .text('Relatório de Checklist de', 225, 42, {
+      width: 290,
+      align: 'left',
+      lineBreak: false
+    });
+
+  doc
+    .font('Helvetica-Bold')
+    .fontSize(19)
+    .fillColor('#111827')
+    .text('Entrega', 225, 66, {
+      width: 290,
+      align: 'left',
+      lineBreak: false
     });
 
   doc
     .font('Helvetica')
-    .fontSize(12)
+    .fontSize(11)
     .fillColor('#6b7280')
-    .text('pronto para morar', 230, 74, {
-      width: 200,
-      align: 'left'
+    .text('pronto para morar', 225, 92, {
+      width: 220,
+      align: 'left',
+      lineBreak: false
     });
 
   doc
     .lineWidth(0.8)
-    .roundedRect(40, 115, 515, 82, 8)
+    .roundedRect(40, 125, 515, 82, 8)
     .stroke('#d1d5db');
 
   doc
     .font('Helvetica-Bold')
     .fontSize(10)
     .fillColor('#111827')
-    .text('Empreendimento:', 55, 132)
+    .text('Empreendimento:', 55, 142)
     .font('Helvetica')
-    .text(inspection.apartment.enterprise.name, 140, 132)
+    .text(inspection.apartment.enterprise.name, 140, 142)
 
     .font('Helvetica-Bold')
-    .text('Apartamento:', 55, 154)
+    .text('Apartamento:', 55, 164)
     .font('Helvetica')
-    .text(String(inspection.apartment.number), 140, 154)
+    .text(String(inspection.apartment.number), 140, 164)
 
     .font('Helvetica-Bold')
-    .text('Responsável:', 55, 176)
+    .text('Responsável:', 55, 186)
     .font('Helvetica')
-    .text(inspection.user.name, 140, 176);
+    .text(inspection.user.name, 140, 186);
 
   doc
     .font('Helvetica-Bold')
-    .text('Data da emissão:', 310, 132)
+    .text('Data da emissão:', 310, 142)
     .font('Helvetica')
     .text(
       new Date(inspection.updatedAt).toLocaleString('pt-BR'),
       410,
-      132
+      142
     )
 
     .font('Helvetica-Bold')
-    .text('Status da vistoria:', 310, 154)
+    .text('Status da vistoria:', 310, 164)
     .font('Helvetica')
-    .text(inspection.status, 410, 154)
+    .text(inspection.status, 410, 164)
 
     .font('Helvetica-Bold')
-    .text('ID da vistoria:', 310, 176)
+    .text('ID da vistoria:', 310, 186)
     .font('Helvetica')
-    .text(inspection.id, 410, 176, {
+    .text(inspection.id, 410, 186, {
       width: 120
     });
 
-  doc.y = 215;
+  doc.y = 225;
 }
 
 function drawMetricsBlock(doc, metrics) {
@@ -314,7 +326,7 @@ async function getImageBuffer(photoUrl) {
 
 function getPhotoList(item) {
   if (Array.isArray(item.photoUrls) && item.photoUrls.length > 0) {
-    return item.photoUrls.filter(Boolean);
+    return item.photoUrls.filter(Boolean).slice(0, 2);
   }
 
   if (item.photoUrl) {
@@ -345,7 +357,7 @@ async function drawInlineNonConformDetails(doc, item) {
   const startX = 58;
   const width = 480;
   const photos = getPhotoList(item);
-  const photoCount = Math.min(photos.length, 2);
+  const photoCount = photos.length;
   const blockHeight = getInlineNonConformHeight(doc, item, photoCount);
 
   ensurePageSpace(doc, blockHeight + 4);
@@ -441,7 +453,7 @@ async function drawLocationSection(doc, group) {
     const itemName = item.checklistItem.itemName || '-';
     const rowHeight = getRowHeight(doc, itemName, itemColWidth - 16);
     const isNonConform = item.status === 'NAO_CONFORME';
-    const photoCount = Math.min(getPhotoList(item).length, 2);
+    const photoCount = getPhotoList(item).length;
     const detailsHeight = isNonConform
       ? getInlineNonConformHeight(doc, item, photoCount) + 4
       : 0;
