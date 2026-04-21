@@ -56,58 +56,95 @@ function ensurePageSpace(doc, requiredHeight = 40) {
 }
 
 function drawHeaderBlock(doc, inspection) {
-  const logoPath = path.resolve(__dirname, '../assets/logo.png');
+  const logoPath = path.resolve(__dirname, '../assets/spotlar-logo.png');
   const hasLogo = fs.existsSync(logoPath);
 
   if (hasLogo) {
     try {
-      doc.image(logoPath, 40, 32, { fit: [90, 42] });
+      doc.image(logoPath, 40, 34, {
+        fit: [160, 60],
+        align: 'left'
+      });
     } catch (error) {
       console.error('Erro ao carregar logo do relatório:', error.message);
     }
   }
 
   doc
+    .strokeColor('#d1d5db')
+    .lineWidth(1)
+    .moveTo(210, 35)
+    .lineTo(210, 88)
+    .stroke();
+
+  doc
     .font('Helvetica-Bold')
-    .fontSize(18)
-    .fillColor('#111111')
-    .text('Relatório de Checklist de Entrega', hasLogo ? 150 : 40, 38, {
-      width: 360,
+    .fontSize(22)
+    .fillColor('#111827')
+    .text('Relatório de Checklist de Entrega', 230, 42, {
+      width: 300,
       align: 'left'
     });
 
   doc
     .font('Helvetica')
-    .fontSize(9)
-    .fillColor('#666666')
-    .text('Relatório de vistoria do apartamento decorado', hasLogo ? 150 : 40, 62, {
-      width: 360,
+    .fontSize(12)
+    .fillColor('#6b7280')
+    .text('pronto para morar', 230, 74, {
+      width: 200,
       align: 'left'
     });
 
   doc
     .lineWidth(0.8)
-    .roundedRect(40, 92, 515, 72, 8)
-    .stroke('#d9d9d9');
+    .roundedRect(40, 115, 515, 82, 8)
+    .stroke('#d1d5db');
 
-  doc.font('Helvetica').fontSize(10).fillColor('#111111');
-  doc.text(`Empreendimento: ${inspection.apartment.enterprise.name}`, 52, 108);
-  doc.text(`Apartamento: ${inspection.apartment.number}`, 52, 126);
-  doc.text(`Responsável: ${inspection.user.name}`, 52, 144);
+  doc
+    .font('Helvetica-Bold')
+    .fontSize(10)
+    .fillColor('#111827')
+    .text('Empreendimento:', 55, 132)
+    .font('Helvetica')
+    .text(inspection.apartment.enterprise.name, 140, 132)
 
-  doc.text(
-    `Data da emissão: ${new Date(inspection.updatedAt).toLocaleString('pt-BR')}`,
-    300,
-    108
-  );
-  doc.text(`Status da vistoria: ${inspection.status}`, 300, 126);
-  doc.text(`ID da vistoria: ${inspection.id}`, 300, 144);
+    .font('Helvetica-Bold')
+    .text('Apartamento:', 55, 154)
+    .font('Helvetica')
+    .text(String(inspection.apartment.number), 140, 154)
 
-  doc.y = 180;
+    .font('Helvetica-Bold')
+    .text('Responsável:', 55, 176)
+    .font('Helvetica')
+    .text(inspection.user.name, 140, 176);
+
+  doc
+    .font('Helvetica-Bold')
+    .text('Data da emissão:', 310, 132)
+    .font('Helvetica')
+    .text(
+      new Date(inspection.updatedAt).toLocaleString('pt-BR'),
+      410,
+      132
+    )
+
+    .font('Helvetica-Bold')
+    .text('Status da vistoria:', 310, 154)
+    .font('Helvetica')
+    .text(inspection.status, 410, 154)
+
+    .font('Helvetica-Bold')
+    .text('ID da vistoria:', 310, 176)
+    .font('Helvetica')
+    .text(inspection.id, 410, 176, {
+      width: 120
+    });
+
+  doc.y = 215;
 }
 
 function drawMetricsBlock(doc, metrics) {
-  ensurePageSpace(doc, 64);
+  ensurePageSpace(doc, 68);
 
   const startY = doc.y;
   const boxWidth = 118;
@@ -115,10 +152,10 @@ function drawMetricsBlock(doc, metrics) {
   const startX = 40;
 
   const cards = [
-    { label: 'Total de itens', value: metrics.total },
-    { label: 'Conformes', value: metrics.conforme },
-    { label: 'Não conformes', value: metrics.naoConforme },
-    { label: 'Pendentes', value: metrics.pendente }
+    { label: 'TOTAL DE ITENS', value: metrics.total, color: '#111111' },
+    { label: 'CONFORMES', value: metrics.conforme, color: '#2f7d32' },
+    { label: 'NÃO CONFORMES', value: metrics.naoConforme, color: '#c62828' },
+    { label: 'PENDENTES', value: metrics.pendente, color: '#d97706' }
   ];
 
   cards.forEach((card, index) => {
@@ -126,14 +163,14 @@ function drawMetricsBlock(doc, metrics) {
 
     doc
       .lineWidth(0.8)
-      .roundedRect(x, startY, boxWidth, 48, 8)
-      .stroke('#d9d9d9');
+      .roundedRect(x, startY, boxWidth, 52, 8)
+      .stroke('#d1d5db');
 
     doc
-      .font('Helvetica')
+      .font('Helvetica-Bold')
       .fontSize(8.5)
-      .fillColor('#666666')
-      .text(card.label, x + 8, startY + 8, {
+      .fillColor('#444444')
+      .text(card.label, x + 8, startY + 10, {
         width: boxWidth - 16,
         align: 'center'
       });
@@ -141,18 +178,18 @@ function drawMetricsBlock(doc, metrics) {
     doc
       .font('Helvetica-Bold')
       .fontSize(18)
-      .fillColor('#111111')
-      .text(String(card.value), x + 8, startY + 22, {
+      .fillColor(card.color)
+      .text(String(card.value), x + 8, startY + 26, {
         width: boxWidth - 16,
         align: 'center'
       });
   });
 
-  doc.y = startY + 58;
+  doc.y = startY + 64;
 }
 
 function drawLocationTitle(doc, location) {
-  ensurePageSpace(doc, 24);
+  ensurePageSpace(doc, 26);
 
   const startY = doc.y;
 
@@ -163,24 +200,24 @@ function drawLocationTitle(doc, location) {
     .text(`Localização: ${location}`, 40, startY);
 
   doc
-    .moveTo(40, startY + 16)
-    .lineTo(555, startY + 16)
+    .moveTo(40, startY + 17)
+    .lineTo(555, startY + 17)
     .lineWidth(0.8)
-    .stroke('#d9d9d9');
+    .stroke('#d1d5db');
 
   doc.y = startY + 22;
 }
 
 function getStatusTextStyle(status) {
   if (status === 'CONFORME') {
-    return { color: '#1f6f43', label: 'CONFORME' };
+    return { color: '#2f7d32', label: 'CONFORME' };
   }
 
   if (status === 'NAO_CONFORME') {
-    return { color: '#a61b1b', label: 'NAO_CONFORME' };
+    return { color: '#c62828', label: 'NAO_CONFORME' };
   }
 
-  return { color: '#8a6d1f', label: 'PENDENTE' };
+  return { color: '#d97706', label: 'PENDENTE' };
 }
 
 function drawTableHeader(doc) {
@@ -210,7 +247,7 @@ function drawTableHeader(doc) {
     .moveTo(startX, startY + headerHeight)
     .lineTo(555, startY + headerHeight)
     .lineWidth(0.8)
-    .stroke('#d9d9d9');
+    .stroke('#d1d5db');
 
   doc.font('Helvetica').fillColor('#111111');
   doc.y = startY + headerHeight + 2;
@@ -275,28 +312,41 @@ async function getImageBuffer(photoUrl) {
   return null;
 }
 
-function getInlineNonConformHeight(doc, item, hasPhoto) {
-  const notesText = `Observações: ${item.notes || '-'}`;
+function getPhotoList(item) {
+  if (Array.isArray(item.photoUrls) && item.photoUrls.length > 0) {
+    return item.photoUrls.filter(Boolean);
+  }
+
+  if (item.photoUrl) {
+    return [item.photoUrl];
+  }
+
+  return [];
+}
+
+function getInlineNonConformHeight(doc, item, photoCount) {
+  const notesText = item.notes || '-';
 
   doc.font('Helvetica').fontSize(9.2);
   const notesHeight = doc.heightOfString(notesText, {
     width: 455
   });
 
-  const baseHeight = 16 + 14 + 6 + notesHeight + 10;
+  const baseHeight = 12 + notesHeight + 10;
 
-  if (!hasPhoto) {
-    return Math.max(44, baseHeight);
+  if (photoCount === 0) {
+    return Math.max(34, baseHeight);
   }
 
-  return Math.max(170, baseHeight + 120);
+  return Math.max(150, baseHeight + 105);
 }
 
 async function drawInlineNonConformDetails(doc, item) {
   const startX = 58;
   const width = 480;
-  const hasPhoto = Boolean(item.photoUrl);
-  const blockHeight = getInlineNonConformHeight(doc, item, hasPhoto);
+  const photos = getPhotoList(item);
+  const photoCount = Math.min(photos.length, 2);
+  const blockHeight = getInlineNonConformHeight(doc, item, photoCount);
 
   ensurePageSpace(doc, blockHeight + 4);
 
@@ -310,48 +360,63 @@ async function drawInlineNonConformDetails(doc, item) {
   let currentY = startY + 10;
 
   doc.font('Helvetica').fontSize(9.2).fillColor('#111111');
-  doc.text(`Quantidade: ${item.checklistItem.quantity}`, startX + 10, currentY);
-
-  currentY += 16;
-
-  const notesText = `Observações: ${item.notes || '-'}`;
-  doc.text(notesText, startX + 10, currentY, {
+  doc.text(item.notes || '-', startX + 10, currentY, {
     width: width - 20
   });
 
-  const notesHeight = doc.heightOfString(notesText, {
+  const notesHeight = doc.heightOfString(item.notes || '-', {
     width: width - 20
   });
 
   currentY += notesHeight + 8;
 
-  if (hasPhoto) {
-    doc.font('Helvetica').fontSize(9).fillColor('#444444');
-    doc.text('Foto da não conformidade:', startX + 10, currentY);
-
-    currentY += 14;
-
+  if (photoCount > 0) {
     try {
-      const imageBuffer = await getImageBuffer(item.photoUrl);
+      const imageBuffers = [];
 
-      if (!imageBuffer) {
-        throw new Error('Imagem não encontrada ou vazia.');
+      for (let i = 0; i < photoCount; i++) {
+        const buffer = await getImageBuffer(photos[i]);
+        if (buffer) {
+          imageBuffers.push(buffer);
+        }
       }
 
-      const photoWidth = 180;
-      const photoHeight = 100;
-      const photoX = startX + (width - photoWidth) / 2;
+      if (imageBuffers.length === 1) {
+        const photoWidth = 180;
+        const photoHeight = 100;
+        const photoX = startX + (width - photoWidth) / 2;
 
-      doc.image(imageBuffer, photoX, currentY, {
-        fit: [photoWidth, photoHeight],
-        align: 'center',
-        valign: 'center'
-      });
+        doc.image(imageBuffers[0], photoX, currentY, {
+          fit: [photoWidth, photoHeight],
+          align: 'center',
+          valign: 'center'
+        });
+      }
+
+      if (imageBuffers.length === 2) {
+        const photoWidth = 180;
+        const photoHeight = 100;
+        const gap = 14;
+        const totalWidth = photoWidth * 2 + gap;
+        const firstX = startX + (width - totalWidth) / 2;
+        const secondX = firstX + photoWidth + gap;
+
+        doc.image(imageBuffers[0], firstX, currentY, {
+          fit: [photoWidth, photoHeight],
+          align: 'center',
+          valign: 'center'
+        });
+
+        doc.image(imageBuffers[1], secondX, currentY, {
+          fit: [photoWidth, photoHeight],
+          align: 'center',
+          valign: 'center'
+        });
+      }
     } catch (error) {
       console.error('Erro ao carregar imagem no relatório:', error.message);
-      console.error('URL da imagem:', item.photoUrl);
 
-      doc.font('Helvetica').fillColor('#a61b1b').fontSize(8.5).text(
+      doc.font('Helvetica').fillColor('#c62828').fontSize(8.5).text(
         'Não foi possível carregar a foto deste item.',
         startX + 10,
         currentY + 4
@@ -376,8 +441,9 @@ async function drawLocationSection(doc, group) {
     const itemName = item.checklistItem.itemName || '-';
     const rowHeight = getRowHeight(doc, itemName, itemColWidth - 16);
     const isNonConform = item.status === 'NAO_CONFORME';
+    const photoCount = Math.min(getPhotoList(item).length, 2);
     const detailsHeight = isNonConform
-      ? getInlineNonConformHeight(doc, item, Boolean(item.photoUrl)) + 4
+      ? getInlineNonConformHeight(doc, item, photoCount) + 4
       : 0;
 
     const minSpace = rowHeight + detailsHeight + 4;

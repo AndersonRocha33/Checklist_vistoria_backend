@@ -74,7 +74,12 @@ class InspectionService {
   }
 
   updateItem(itemId, data) {
-    return inspectionItemRepository.update(itemId, data);
+    return inspectionItemRepository.update(itemId, {
+      status: data.status,
+      notes: data.notes,
+      photoUrl: data.photoUrl || null,
+      photoUrls: Array.isArray(data.photoUrls) ? data.photoUrls : []
+    });
   }
 
   async updateItemsBatch(data) {

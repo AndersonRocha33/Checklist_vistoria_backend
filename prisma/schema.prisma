@@ -55,13 +55,13 @@ model Apartment {
 
 model ChecklistItem {
   id              String           @id @default(uuid())
-  apartmentId      String
-  apartment        Apartment        @relation(fields: [apartmentId], references: [id], onDelete: Cascade)
-  location         String
-  itemName         String
-  quantity         Int
-  createdAt        DateTime         @default(now())
-  inspectionItems  InspectionItem[]
+  apartmentId     String
+  apartment       Apartment        @relation(fields: [apartmentId], references: [id], onDelete: Cascade)
+  location        String
+  itemName        String
+  quantity        Int
+  createdAt       DateTime         @default(now())
+  inspectionItems InspectionItem[]
 }
 
 model Inspection {
@@ -81,14 +81,15 @@ model Inspection {
 
 model InspectionItem {
   id              String         @id @default(uuid())
-  inspectionId     String
-  inspection       Inspection     @relation(fields: [inspectionId], references: [id], onDelete: Cascade)
-  checklistItemId  String
-  checklistItem    ChecklistItem  @relation(fields: [checklistItemId], references: [id], onDelete: Cascade)
-  status           ItemStatus     @default(PENDENTE)
-  notes            String?
-  photoUrl         String?
-  updatedAt        DateTime       @updatedAt
+  inspectionId    String
+  inspection      Inspection     @relation(fields: [inspectionId], references: [id], onDelete: Cascade)
+  checklistItemId String
+  checklistItem   ChecklistItem  @relation(fields: [checklistItemId], references: [id], onDelete: Cascade)
+  status          ItemStatus     @default(PENDENTE)
+  notes           String?
+  photoUrl        String?
+  photoUrls       String[]       @default([])
+  updatedAt       DateTime       @updatedAt
 
   @@unique([inspectionId, checklistItemId])
 }

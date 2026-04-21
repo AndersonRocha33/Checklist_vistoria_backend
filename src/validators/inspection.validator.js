@@ -3,7 +3,8 @@ const {
   optionalString,
   requireEnum,
   requireArray,
-  optionalBase64Image
+  optionalBase64Image,
+  optionalBase64ImageArray
 } = require('../utils/validators');
 
 const allowedStatuses = ['PENDENTE', 'CONFORME', 'NAO_CONFORME'];
@@ -18,7 +19,17 @@ function updateInspectionItemSchema(payload) {
   return {
     status: requireEnum(payload.status, allowedStatuses, 'status', 'Status inválido.'),
     notes: optionalString(payload.notes),
-    photoUrl: optionalString(payload.photoUrl)
+    photoUrl: optionalBase64Image(
+      payload.photoUrl,
+      'photoUrl',
+      'Foto principal em formato inválido.'
+    ),
+    photoUrls: optionalBase64ImageArray(
+      payload.photoUrls,
+      'photoUrls',
+      'Lista de fotos em formato inválido.',
+      2
+    )
   };
 }
 
@@ -44,6 +55,7 @@ function saveSignaturesSchema(payload) {
     'inspectorSignature',
     'Assinatura do vistoriador em formato inválido.'
   );
+
   const clientSignature = optionalBase64Image(
     payload.clientSignature,
     'clientSignature',
