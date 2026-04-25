@@ -332,6 +332,7 @@ function getInlineNonConformHeight(doc, item, photoCount) {
   const notesText = item.notes || '-';
 
   doc.font('Helvetica').fontSize(8.5);
+
   const notesHeight = doc.heightOfString(notesText, {
     width: 455
   });
@@ -342,7 +343,7 @@ function getInlineNonConformHeight(doc, item, photoCount) {
     return Math.max(28, baseHeight);
   }
 
-  return Math.max(128, baseHeight + 92);
+  return Math.max(175, baseHeight + 138);
 }
 
 async function drawInlineNonConformDetails(doc, item) {
@@ -372,7 +373,7 @@ async function drawInlineNonConformDetails(doc, item) {
     width: width - 18
   });
 
-  currentY += notesHeight + 6;
+  currentY += notesHeight + 8;
 
   if (photoCount > 0) {
     try {
@@ -386,8 +387,8 @@ async function drawInlineNonConformDetails(doc, item) {
       }
 
       if (imageBuffers.length === 1) {
-        const photoWidth = 165;
-        const photoHeight = 88;
+        const photoWidth = 220;
+        const photoHeight = 130;
         const photoX = startX + (width - photoWidth) / 2;
 
         doc.image(imageBuffers[0], photoX, currentY, {
@@ -398,8 +399,8 @@ async function drawInlineNonConformDetails(doc, item) {
       }
 
       if (imageBuffers.length === 2) {
-        const photoWidth = 165;
-        const photoHeight = 88;
+        const photoWidth = 220;
+        const photoHeight = 130;
         const gap = 12;
         const totalWidth = photoWidth * 2 + gap;
         const firstX = startX + (width - totalWidth) / 2;
