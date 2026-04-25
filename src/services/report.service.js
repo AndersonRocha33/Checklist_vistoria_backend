@@ -61,8 +61,8 @@ function drawHeaderBlock(doc, inspection) {
 
   if (hasLogo) {
     try {
-      doc.image(logoPath, 40, 34, {
-        fit: [150, 56],
+      doc.image(logoPath, 40, 32, {
+        fit: [150, 50],
         align: 'left'
       });
     } catch (error) {
@@ -71,92 +71,77 @@ function drawHeaderBlock(doc, inspection) {
   }
 
   doc
+    .font('Helvetica')
+    .fontSize(11)
+    .fillColor('#6b7280')
+    .text('pronto para morar', 58, 84, {
+      width: 140,
+      align: 'left',
+      lineBreak: false
+    });
+
+  doc
     .strokeColor('#d1d5db')
     .lineWidth(1)
-    .moveTo(205, 38)
-    .lineTo(205, 92)
+    .moveTo(210, 35)
+    .lineTo(210, 98)
     .stroke();
 
   doc
     .font('Helvetica-Bold')
-    .fontSize(19)
+    .fontSize(20)
     .fillColor('#111827')
-    .text('Relatório de Checklist de', 225, 42, {
-      width: 290,
-      align: 'left',
-      lineBreak: false
-    });
-
-  doc
-    .font('Helvetica-Bold')
-    .fontSize(19)
-    .fillColor('#111827')
-    .text('Entrega', 225, 66, {
-      width: 290,
-      align: 'left',
-      lineBreak: false
-    });
-
-  doc
-    .font('Helvetica')
-    .fontSize(11)
-    .fillColor('#6b7280')
-    .text('pronto para morar', 225, 92, {
-      width: 220,
-      align: 'left',
-      lineBreak: false
+    .text('Relatório de Checklist de Entrega', 230, 42, {
+      width: 300,
+      align: 'left'
     });
 
   doc
     .lineWidth(0.8)
-    .roundedRect(40, 125, 515, 82, 8)
+    .roundedRect(40, 118, 515, 74, 8)
     .stroke('#d1d5db');
 
   doc
     .font('Helvetica-Bold')
-    .fontSize(10)
+    .fontSize(9.5)
     .fillColor('#111827')
-    .text('Empreendimento:', 55, 142)
+    .text('Empreendimento:', 55, 134)
     .font('Helvetica')
-    .text(inspection.apartment.enterprise.name, 140, 142)
+    .text(inspection.apartment.enterprise.name, 140, 134, { width: 150 })
 
     .font('Helvetica-Bold')
-    .text('Apartamento:', 55, 164)
+    .text('Apartamento:', 55, 154)
     .font('Helvetica')
-    .text(String(inspection.apartment.number), 140, 164)
+    .text(String(inspection.apartment.number), 140, 154, { width: 150 })
 
     .font('Helvetica-Bold')
-    .text('Responsável:', 55, 186)
+    .text('Responsável:', 55, 174)
     .font('Helvetica')
-    .text(inspection.user.name, 140, 186);
+    .text(inspection.user.name, 140, 174, { width: 150 });
 
   doc
     .font('Helvetica-Bold')
-    .text('Data da emissão:', 310, 142)
+    .text('Data da emissão:', 310, 134)
     .font('Helvetica')
-    .text(
-      new Date(inspection.updatedAt).toLocaleString('pt-BR'),
-      410,
-      142
-    )
+    .text(new Date(inspection.updatedAt).toLocaleString('pt-BR'), 410, 134, {
+      width: 125
+    })
 
     .font('Helvetica-Bold')
-    .text('Status da vistoria:', 310, 164)
+    .text('Status:', 310, 154)
     .font('Helvetica')
-    .text(inspection.status, 410, 164)
+    .text(inspection.status, 410, 154, { width: 125 })
 
     .font('Helvetica-Bold')
-    .text('ID da vistoria:', 310, 186)
+    .text('ID:', 310, 174)
     .font('Helvetica')
-    .text(inspection.id, 410, 186, {
-      width: 120
-    });
+    .text(inspection.id, 410, 174, { width: 125 });
 
-  doc.y = 225;
+  doc.y = 208;
 }
 
 function drawMetricsBlock(doc, metrics) {
-  ensurePageSpace(doc, 68);
+  ensurePageSpace(doc, 52);
 
   const startY = doc.y;
   const boxWidth = 118;
@@ -164,7 +149,7 @@ function drawMetricsBlock(doc, metrics) {
   const startX = 40;
 
   const cards = [
-    { label: 'TOTAL DE ITENS', value: metrics.total, color: '#111111' },
+    { label: 'TOTAL', value: metrics.total, color: '#111111' },
     { label: 'CONFORMES', value: metrics.conforme, color: '#2f7d32' },
     { label: 'NÃO CONFORMES', value: metrics.naoConforme, color: '#c62828' },
     { label: 'PENDENTES', value: metrics.pendente, color: '#d97706' }
@@ -174,50 +159,50 @@ function drawMetricsBlock(doc, metrics) {
     const x = startX + index * (boxWidth + gap);
 
     doc
-      .lineWidth(0.8)
-      .roundedRect(x, startY, boxWidth, 52, 8)
+      .lineWidth(0.6)
+      .roundedRect(x, startY, boxWidth, 42, 7)
       .stroke('#d1d5db');
 
     doc
       .font('Helvetica-Bold')
-      .fontSize(8.5)
+      .fontSize(8)
       .fillColor('#444444')
-      .text(card.label, x + 8, startY + 10, {
+      .text(card.label, x + 8, startY + 8, {
         width: boxWidth - 16,
         align: 'center'
       });
 
     doc
       .font('Helvetica-Bold')
-      .fontSize(18)
+      .fontSize(15)
       .fillColor(card.color)
-      .text(String(card.value), x + 8, startY + 26, {
+      .text(String(card.value), x + 8, startY + 22, {
         width: boxWidth - 16,
         align: 'center'
       });
   });
 
-  doc.y = startY + 64;
+  doc.y = startY + 52;
 }
 
 function drawLocationTitle(doc, location) {
-  ensurePageSpace(doc, 26);
+  ensurePageSpace(doc, 42);
 
-  const startY = doc.y;
+  const startY = doc.y + 4;
 
   doc
     .font('Helvetica-Bold')
-    .fontSize(11)
+    .fontSize(10.5)
     .fillColor('#222222')
     .text(`Localização: ${location}`, 40, startY);
 
   doc
-    .moveTo(40, startY + 17)
-    .lineTo(555, startY + 17)
-    .lineWidth(0.8)
+    .moveTo(40, startY + 15)
+    .lineTo(555, startY + 15)
+    .lineWidth(0.6)
     .stroke('#d1d5db');
 
-  doc.y = startY + 22;
+  doc.y = startY + 20;
 }
 
 function getStatusTextStyle(status) {
@@ -233,32 +218,38 @@ function getStatusTextStyle(status) {
 }
 
 function drawTableHeader(doc) {
+  ensurePageSpace(doc, 24);
+
   const startX = 40;
   const startY = doc.y;
   const itemColWidth = 385;
   const qtyColWidth = 45;
   const statusColWidth = 85;
-  const headerHeight = 18;
+  const headerHeight = 16;
 
-  doc.font('Helvetica-Bold').fontSize(8.5).fillColor('#444444');
-  doc.text('ITEM', startX + 8, startY + 5, {
-    width: itemColWidth - 12
+  doc.font('Helvetica-Bold').fontSize(8).fillColor('#444444');
+
+  doc.text('ITEM', startX + 6, startY + 4, {
+    width: itemColWidth - 12,
+    lineBreak: false
   });
 
-  doc.text('QTDE', startX + itemColWidth, startY + 5, {
+  doc.text('QTDE', startX + itemColWidth, startY + 4, {
     width: qtyColWidth,
-    align: 'center'
+    align: 'center',
+    lineBreak: false
   });
 
-  doc.text('STATUS', startX + itemColWidth + qtyColWidth, startY + 5, {
+  doc.text('STATUS', startX + itemColWidth + qtyColWidth, startY + 4, {
     width: statusColWidth,
-    align: 'center'
+    align: 'center',
+    lineBreak: false
   });
 
   doc
     .moveTo(startX, startY + headerHeight)
     .lineTo(555, startY + headerHeight)
-    .lineWidth(0.8)
+    .lineWidth(0.6)
     .stroke('#d1d5db');
 
   doc.font('Helvetica').fillColor('#111111');
@@ -266,13 +257,14 @@ function drawTableHeader(doc) {
 }
 
 function getRowHeight(doc, itemName, width) {
-  doc.font('Helvetica').fontSize(8.5);
+  doc.font('Helvetica').fontSize(8.1);
+
   const textHeight = doc.heightOfString(itemName || '-', {
     width,
     align: 'left'
   });
 
-  return Math.max(16, textHeight + 4);
+  return Math.max(14, textHeight + 3);
 }
 
 function normalizePhotoUrl(photoUrl) {
@@ -339,18 +331,18 @@ function getPhotoList(item) {
 function getInlineNonConformHeight(doc, item, photoCount) {
   const notesText = item.notes || '-';
 
-  doc.font('Helvetica').fontSize(9.2);
+  doc.font('Helvetica').fontSize(8.5);
   const notesHeight = doc.heightOfString(notesText, {
     width: 455
   });
 
-  const baseHeight = 12 + notesHeight + 10;
+  const baseHeight = 10 + notesHeight + 8;
 
   if (photoCount === 0) {
-    return Math.max(34, baseHeight);
+    return Math.max(28, baseHeight);
   }
 
-  return Math.max(150, baseHeight + 105);
+  return Math.max(128, baseHeight + 92);
 }
 
 async function drawInlineNonConformDetails(doc, item) {
@@ -365,22 +357,22 @@ async function drawInlineNonConformDetails(doc, item) {
   const startY = doc.y;
 
   doc
-    .lineWidth(0.6)
-    .roundedRect(startX, startY, width, blockHeight, 6)
+    .lineWidth(0.5)
+    .roundedRect(startX, startY, width, blockHeight, 5)
     .stroke('#e4e4e4');
 
-  let currentY = startY + 10;
+  let currentY = startY + 8;
 
-  doc.font('Helvetica').fontSize(9.2).fillColor('#111111');
-  doc.text(item.notes || '-', startX + 10, currentY, {
-    width: width - 20
+  doc.font('Helvetica').fontSize(8.5).fillColor('#111111');
+  doc.text(item.notes || '-', startX + 9, currentY, {
+    width: width - 18
   });
 
   const notesHeight = doc.heightOfString(item.notes || '-', {
-    width: width - 20
+    width: width - 18
   });
 
-  currentY += notesHeight + 8;
+  currentY += notesHeight + 6;
 
   if (photoCount > 0) {
     try {
@@ -394,8 +386,8 @@ async function drawInlineNonConformDetails(doc, item) {
       }
 
       if (imageBuffers.length === 1) {
-        const photoWidth = 180;
-        const photoHeight = 100;
+        const photoWidth = 165;
+        const photoHeight = 88;
         const photoX = startX + (width - photoWidth) / 2;
 
         doc.image(imageBuffers[0], photoX, currentY, {
@@ -406,9 +398,9 @@ async function drawInlineNonConformDetails(doc, item) {
       }
 
       if (imageBuffers.length === 2) {
-        const photoWidth = 180;
-        const photoHeight = 100;
-        const gap = 14;
+        const photoWidth = 165;
+        const photoHeight = 88;
+        const gap = 12;
         const totalWidth = photoWidth * 2 + gap;
         const firstX = startX + (width - totalWidth) / 2;
         const secondX = firstX + photoWidth + gap;
@@ -428,19 +420,21 @@ async function drawInlineNonConformDetails(doc, item) {
     } catch (error) {
       console.error('Erro ao carregar imagem no relatório:', error.message);
 
-      doc.font('Helvetica').fillColor('#c62828').fontSize(8.5).text(
+      doc.font('Helvetica').fillColor('#c62828').fontSize(8).text(
         'Não foi possível carregar a foto deste item.',
-        startX + 10,
+        startX + 9,
         currentY + 4
       );
+
       doc.fillColor('#111111');
     }
   }
 
-  doc.y = startY + blockHeight + 4;
+  doc.y = startY + blockHeight + 3;
 }
 
 async function drawLocationSection(doc, group) {
+  ensurePageSpace(doc, 68);
   drawLocationTitle(doc, group.location);
   drawTableHeader(doc);
 
@@ -451,16 +445,14 @@ async function drawLocationSection(doc, group) {
 
   for (const item of group.items) {
     const itemName = item.checklistItem.itemName || '-';
-    const rowHeight = getRowHeight(doc, itemName, itemColWidth - 16);
+    const rowHeight = getRowHeight(doc, itemName, itemColWidth - 14);
     const isNonConform = item.status === 'NAO_CONFORME';
     const photoCount = getPhotoList(item).length;
     const detailsHeight = isNonConform
       ? getInlineNonConformHeight(doc, item, photoCount) + 4
       : 0;
 
-    const minSpace = rowHeight + detailsHeight + 4;
-
-    ensurePageSpace(doc, minSpace);
+    const minSpace = rowHeight + detailsHeight + 5;
 
     if (doc.y + minSpace > doc.page.height - doc.page.margins.bottom) {
       doc.addPage();
@@ -474,26 +466,28 @@ async function drawLocationSection(doc, group) {
     doc
       .moveTo(startX, y - 2)
       .lineTo(555, y - 2)
-      .lineWidth(0.5)
-      .stroke('#efefef');
+      .lineWidth(0.35)
+      .stroke('#eeeeee');
 
-    doc.font('Helvetica').fontSize(8.5).fillColor('#111111');
-    doc.text(itemName, startX + 8, y + 1, {
-      width: itemColWidth - 16
+    doc.font('Helvetica').fontSize(8.1).fillColor('#111111');
+    doc.text(itemName, startX + 6, y + 1, {
+      width: itemColWidth - 14
     });
 
     doc.text(String(item.checklistItem.quantity || 0), startX + itemColWidth, y + 1, {
       width: qtyColWidth,
-      align: 'center'
+      align: 'center',
+      lineBreak: false
     });
 
-    doc.font('Helvetica-Bold').fillColor(statusStyle.color).text(
+    doc.font('Helvetica-Bold').fontSize(8).fillColor(statusStyle.color).text(
       statusStyle.label,
       startX + itemColWidth + qtyColWidth,
       y + 1,
       {
         width: statusColWidth,
-        align: 'center'
+        align: 'center',
+        lineBreak: false
       }
     );
 
@@ -505,33 +499,33 @@ async function drawLocationSection(doc, group) {
     }
   }
 
-  doc.y += 6;
+  doc.y += 4;
 }
 
 function drawSignaturesBlock(doc, inspection) {
-  ensurePageSpace(doc, 145);
+  ensurePageSpace(doc, 130);
 
   doc
     .font('Helvetica-Bold')
-    .fontSize(12)
+    .fontSize(11)
     .fillColor('#111111')
     .text('Assinaturas', 40, doc.y, {
       width: 515,
       align: 'center'
     });
 
-  doc.y += 18;
+  doc.y += 16;
 
   const boxWidth = 230;
-  const boxHeight = 68;
+  const boxHeight = 62;
   const leftX = 40;
   const rightX = 320;
   const titleY = doc.y;
-  const boxY = titleY + 14;
-  const lineOffset = 79;
-  const nameOffset = 86;
+  const boxY = titleY + 13;
+  const lineOffset = 73;
+  const nameOffset = 80;
 
-  doc.font('Helvetica').fontSize(10).text('Assinatura do vistoriador:', leftX, titleY, {
+  doc.font('Helvetica').fontSize(9).text('Assinatura do vistoriador:', leftX, titleY, {
     width: boxWidth
   });
   doc.text('Assinatura do cliente:', rightX, titleY, {
@@ -550,13 +544,13 @@ function drawSignaturesBlock(doc, inspection) {
         valign: 'center'
       });
     } catch (error) {
-      doc.fontSize(8.5).text('Assinatura inválida', leftX, boxY + 28, {
+      doc.fontSize(8).text('Assinatura inválida', leftX, boxY + 26, {
         width: boxWidth,
         align: 'center'
       });
     }
   } else {
-    doc.fontSize(8.5).text('Não informada', leftX, boxY + 28, {
+    doc.fontSize(8).text('Não informada', leftX, boxY + 26, {
       width: boxWidth,
       align: 'center'
     });
@@ -571,13 +565,13 @@ function drawSignaturesBlock(doc, inspection) {
         valign: 'center'
       });
     } catch (error) {
-      doc.fontSize(8.5).text('Assinatura inválida', rightX, boxY + 28, {
+      doc.fontSize(8).text('Assinatura inválida', rightX, boxY + 26, {
         width: boxWidth,
         align: 'center'
       });
     }
   } else {
-    doc.fontSize(8.5).text('Não informada', rightX, boxY + 28, {
+    doc.fontSize(8).text('Não informada', rightX, boxY + 26, {
       width: boxWidth,
       align: 'center'
     });
@@ -586,7 +580,7 @@ function drawSignaturesBlock(doc, inspection) {
   doc.moveTo(leftX, boxY + lineOffset).lineTo(leftX + boxWidth, boxY + lineOffset).stroke('#d9d9d9');
   doc.moveTo(rightX, boxY + lineOffset).lineTo(rightX + boxWidth, boxY + lineOffset).stroke('#d9d9d9');
 
-  doc.fontSize(8.5).fillColor('#111111');
+  doc.fontSize(8).fillColor('#111111');
   doc.text('Vistoriador', leftX, boxY + nameOffset, {
     width: boxWidth,
     align: 'center'
@@ -596,7 +590,7 @@ function drawSignaturesBlock(doc, inspection) {
     align: 'center'
   });
 
-  doc.y = boxY + 104;
+  doc.y = boxY + 96;
 }
 
 class ReportService {
