@@ -21,15 +21,13 @@ class ApartmentRepository {
     });
   }
 
-  findAllWithInspectionSummary(ownerId = null) {
+  findAllWithInspectionSummaryByOwner(ownerId) {
     return prisma.apartment.findMany({
-      where: ownerId
-        ? {
-            enterprise: {
-              ownerId
-            }
-          }
-        : undefined,
+      where: {
+        enterprise: {
+          ownerId
+        }
+      },
       include: {
         enterprise: true,
         checklistItems: true,
@@ -49,17 +47,13 @@ class ApartmentRepository {
     });
   }
 
-  findByEnterpriseWithInspectionSummary(enterpriseId, ownerId = null) {
+  findByEnterpriseWithInspectionSummaryAndOwner(enterpriseId, ownerId) {
     return prisma.apartment.findMany({
       where: {
         enterpriseId,
-        ...(ownerId
-          ? {
-              enterprise: {
-                ownerId
-              }
-            }
-          : {})
+        enterprise: {
+          ownerId
+        }
       },
       include: {
         enterprise: true,
@@ -75,14 +69,6 @@ class ApartmentRepository {
       },
       orderBy: {
         number: 'asc'
-      }
-    });
-  }
-
-  findAllWithEnterprise(db = prisma) {
-    return db.apartment.findMany({
-      include: {
-        enterprise: true
       }
     });
   }
