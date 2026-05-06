@@ -11,6 +11,19 @@ function normalizeText(value) {
   return String(value).trim();
 }
 
+function normalizeComparableText(value) {
+  return normalizeText(value)
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
+}
+
+function isAllowedTipo(tipo) {
+  const normalized = normalizeComparableText(tipo);
+
+  return normalized === 'produto' || normalized === 'produto sob medida';
+}
+
 function normalizeNumber(value) {
   if (value === null || value === undefined || value === '') return Number.NaN;
 
@@ -118,15 +131,28 @@ class UploadService {
 
       const normalizedRows = [];
       let totalLinhasIgnoradas = 0;
+      let totalLinhasIgnoradasPorTipo = 0;
       const ownerId = req.user.id;
 
       for (const row of records) {
+        const tipo = normalizeText(
+          getField(row, ['TIPO', 'Tipo', 'tipo'])
+        );
+
+        if (!isAllowedTipo(tipo)) {
+          totalLinhasIgnoradas++;
+          totalLinhasIgnoradasPorTipo++;
+          continue;
+        }
+
         const empreendimento = normalizeText(
           getField(row, ['EMPREENDIMENTO', 'empreendimento', 'Empreendimento'])
         );
+
         const apartamento = normalizeText(
           getField(row, ['UH', 'uh', 'APARTAMENTO', 'apartamento', 'Apartamento'])
         );
+
         const localizacao = normalizeText(
           getField(row, [
             'LOCALIZAÇÃO',
@@ -136,7 +162,9 @@ class UploadService {
             'Localizacao'
           ])
         );
+
         const item = normalizeText(getField(row, ['ITEM', 'item', 'Item']));
+
         const quantidade = normalizeNumber(
           getField(row, ['QTDE', 'QUANTIDADE', 'quantidade', 'Qtde', 'Quantidade'])
         );
@@ -158,7 +186,8 @@ class UploadService {
       if (!normalizedRows.length) {
         throw new ValidationError('Nenhuma linha válida foi encontrada no CSV.', {
           totalLinhasProcessadas: records.length,
-          totalLinhasIgnoradas
+          totalLinhasIgnoradas,
+          totalLinhasIgnoradasPorTipo
         });
       }
 
@@ -275,6 +304,7 @@ class UploadService {
         totalApartamentosCriados: result.totalApartmentsCreated,
         totalItensCriados: result.totalItemsCreated,
         totalLinhasIgnoradas,
+        totalLinhasIgnoradasPorTipo,
         encodingUsado: encoding,
         delimitadorUsado: delimiter
       };

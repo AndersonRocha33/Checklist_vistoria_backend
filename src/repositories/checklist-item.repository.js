@@ -24,6 +24,12 @@ class ChecklistItemRepository {
       data
     });
   }
+
+  deleteById(id, db = prisma) {
+    return db.checklistItem.delete({
+      where: { id }
+    });
+  }
 }
 
 module.exports = new ChecklistItemRepository();

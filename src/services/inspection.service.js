@@ -74,12 +74,7 @@ class InspectionService {
   }
 
   updateItem(itemId, data) {
-    return inspectionItemRepository.update(itemId, {
-      status: data.status,
-      notes: data.notes,
-      photoUrl: data.photoUrl || null,
-      photoUrls: Array.isArray(data.photoUrls) ? data.photoUrls : []
-    });
+    return inspectionItemRepository.update(itemId, data);
   }
 
   async updateItemsBatch(data) {
@@ -92,6 +87,40 @@ class InspectionService {
     return {
       message: 'Itens atualizados com sucesso.',
       items: updatedItems
+    };
+  }
+
+  async deleteChecklistItemFromInspectionItem({ itemId, userId }) {
+    const inspectionItem = await prisma.inspectionItem.findUnique({
+      where: { id: itemId },
+      include: {
+        checklistItem: {
+          include: {
+            apartment: {
+              include: {
+                enterprise: true
+              }
+            }
+          }
+        },
+        inspection: true
+      }
+    });
+
+    if (!inspectionItem) {
+      throw new NotFoundError('Item da vistoria não encontrado.');
+    }
+
+    const enterpriseOwnerId = inspectionItem.checklistItem?.apartment?.enterprise?.ownerId;
+
+    if (enterpriseOwnerId && enterpriseOwnerId !== userId) {
+      throw new NotFoundError('Item não encontrado para este usuário.');
+    }
+
+    await checklistItemRepository.deleteById(inspectionItem.checklistItemId);
+
+    return {
+      message: 'Item excluído do checklist com sucesso.'
     };
   }
 

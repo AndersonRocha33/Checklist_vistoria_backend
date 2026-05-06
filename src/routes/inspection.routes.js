@@ -18,26 +18,38 @@ router.post(
   validate(startInspectionSchema),
   asyncHandler(inspectionController.start)
 );
+
 router.put(
   '/items/batch',
   authMiddleware,
   validate(updateInspectionItemsBatchSchema),
   asyncHandler(inspectionController.updateItemsBatch)
 );
+
 router.put(
   '/:id/signatures',
   authMiddleware,
   validate(saveSignaturesSchema),
   asyncHandler(inspectionController.saveSignatures)
 );
+
 router.get('/:id/report', authMiddleware, asyncHandler(inspectionController.generateReport));
+
 router.get('/:id', authMiddleware, asyncHandler(inspectionController.getById));
+
+router.delete(
+  '/item/:itemId/checklist',
+  authMiddleware,
+  asyncHandler(inspectionController.deleteChecklistItem)
+);
+
 router.put(
   '/item/:itemId',
   authMiddleware,
   validate(updateInspectionItemSchema),
   asyncHandler(inspectionController.updateItem)
 );
+
 router.put('/:id/finish', authMiddleware, asyncHandler(inspectionController.finish));
 
 module.exports = router;

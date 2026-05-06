@@ -26,6 +26,15 @@ class InspectionController {
     return res.json(result);
   }
 
+  async deleteChecklistItem(req, res) {
+    const result = await inspectionService.deleteChecklistItemFromInspectionItem({
+      itemId: req.params.itemId,
+      userId: req.user.id
+    });
+
+    return res.json(result);
+  }
+
   async saveSignatures(req, res) {
     const result = await inspectionService.saveSignatures(req.params.id, req.validated.body);
     return res.json(result);
