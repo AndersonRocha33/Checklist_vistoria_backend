@@ -2,7 +2,6 @@ const fs = require('fs');
 const { parse } = require('csv-parse/sync');
 const prisma = require('../lib/prisma');
 const enterpriseRepository = require('../repositories/enterprise.repository');
-const apartmentRepository = require('../repositories/apartment.repository');
 const checklistItemRepository = require('../repositories/checklist-item.repository');
 const { ValidationError } = require('../errors/http-errors');
 
@@ -20,7 +19,6 @@ function normalizeComparableText(value) {
 
 function isAllowedTipo(tipo) {
   const normalized = normalizeComparableText(tipo);
-
   return normalized === 'produto' || normalized === 'produto sob medida';
 }
 
@@ -135,9 +133,7 @@ class UploadService {
       const ownerId = req.user.id;
 
       for (const row of records) {
-        const tipo = normalizeText(
-          getField(row, ['TIPO', 'Tipo', 'tipo'])
-        );
+        const tipo = normalizeText(getField(row, ['TIPO', 'Tipo', 'tipo']));
 
         if (!isAllowedTipo(tipo)) {
           totalLinhasIgnoradas++;
@@ -191,111 +187,176 @@ class UploadService {
         });
       }
 
-      const result = await prisma.$transaction(async (db) => {
-        const uniqueEnterpriseNames = [...new Set(normalizedRows.map((row) => row.empreendimento))];
+      const result = await prisma.$transaction(
+        async (db) => {
+          const uniqueEnterpriseNames = [
+            ...new Set(normalizedRows.map((row) => row.empreendimento))
+          ];
 
-        const existingEnterprises = await enterpriseRepository.findManyByNamesAndOwner(
-          uniqueEnterpriseNames,
-          ownerId,
-          db
-        );
+          const existingEnterprises = await enterpriseRepository.findManyByNamesAndOwner(
+            uniqueEnterpriseNames,
+            ownerId,
+            db
+          );
 
-        const enterpriseMap = new Map(existingEnterprises.map((enterprise) => [enterprise.name, enterprise]));
+          const enterpriseMap = new Map(
+            existingEnterprises.map((enterprise) => [enterprise.name, enterprise])
+          );
 
-        let totalEnterprisesCreated = 0;
-        let totalApartmentsCreated = 0;
-        let totalItemsCreated = 0;
+          let totalEnterprisesCreated = 0;
+          let totalApartmentsCreated = 0;
+          let totalItemsCreated = 0;
 
-        for (const enterpriseName of uniqueEnterpriseNames) {
-          if (!enterpriseMap.has(enterpriseName)) {
-            const createdEnterprise = await enterpriseRepository.create(
-              {
-                name: enterpriseName,
+          for (const enterpriseName of uniqueEnterpriseNames) {
+            if (!enterpriseMap.has(enterpriseName)) {
+              const createdEnterprise = await enterpriseRepository.create(
+                {
+                  name: enterpriseName,
+                  ownerId
+                },
+                db
+              );
+
+              enterpriseMap.set(enterpriseName, createdEnterprise);
+              totalEnterprisesCreated++;
+            }
+          }
+
+          let allApartments = await db.apartment.findMany({
+            where: {
+              enterprise: {
                 ownerId
-              },
-              db
-            );
+              }
+            },
+            include: {
+              enterprise: true
+            }
+          });
 
-            enterpriseMap.set(enterpriseName, createdEnterprise);
-            totalEnterprisesCreated++;
+          const apartmentMap = new Map(
+            allApartments.map((apartment) => [
+              `${apartment.enterprise.name}|||${apartment.number}`,
+              apartment
+            ])
+          );
+
+          const apartmentsToCreate = [];
+          const uniqueApartments = new Map();
+
+          for (const row of normalizedRows) {
+            const key = `${row.empreendimento}|||${row.apartamento}`;
+
+            if (!uniqueApartments.has(key)) {
+              uniqueApartments.set(key, row);
+            }
           }
-        }
 
-        const allApartments = await apartmentRepository.findAllWithEnterpriseByOwner(ownerId, db);
+          for (const row of uniqueApartments.values()) {
+            const apartmentKey = `${row.empreendimento}|||${row.apartamento}`;
 
-        const apartmentMap = new Map(
-          allApartments.map((apartment) => [`${apartment.enterprise.name}|||${apartment.number}`, apartment])
-        );
+            if (!apartmentMap.has(apartmentKey)) {
+              const enterprise = enterpriseMap.get(row.empreendimento);
 
-        const uniqueApartments = new Map();
-
-        for (const row of normalizedRows) {
-          const key = `${row.empreendimento}|||${row.apartamento}`;
-          if (!uniqueApartments.has(key)) {
-            uniqueApartments.set(key, row);
-          }
-        }
-
-        for (const row of uniqueApartments.values()) {
-          const apartmentKey = `${row.empreendimento}|||${row.apartamento}`;
-
-          if (!apartmentMap.has(apartmentKey)) {
-            const enterprise = enterpriseMap.get(row.empreendimento);
-
-            const createdApartment = await apartmentRepository.create(
-              {
+              apartmentsToCreate.push({
                 number: row.apartamento,
                 enterpriseId: enterprise.id
-              },
-              db
-            );
-
-            apartmentMap.set(apartmentKey, createdApartment);
-            totalApartmentsCreated++;
+              });
+            }
           }
-        }
 
-        const allChecklistItems = await checklistItemRepository.findAllWithApartmentAndEnterprise(db);
+          if (apartmentsToCreate.length > 0) {
+            const createdApartments = await db.apartment.createMany({
+              data: apartmentsToCreate,
+              skipDuplicates: true
+            });
 
-        const checklistItemMap = new Set(
-          allChecklistItems
-            .filter((item) => item.apartment?.enterprise?.ownerId === ownerId)
-            .map(
+            totalApartmentsCreated = createdApartments.count;
+
+            allApartments = await db.apartment.findMany({
+              where: {
+                enterprise: {
+                  ownerId
+                }
+              },
+              include: {
+                enterprise: true
+              }
+            });
+
+            apartmentMap.clear();
+
+            allApartments.forEach((apartment) => {
+              apartmentMap.set(
+                `${apartment.enterprise.name}|||${apartment.number}`,
+                apartment
+              );
+            });
+          }
+
+          const allChecklistItems = await db.checklistItem.findMany({
+            where: {
+              apartment: {
+                enterprise: {
+                  ownerId
+                }
+              }
+            },
+            include: {
+              apartment: {
+                include: {
+                  enterprise: true
+                }
+              }
+            }
+          });
+
+          const checklistItemMap = new Set(
+            allChecklistItems.map(
               (item) =>
                 `${item.apartment.enterprise.name}|||${item.apartment.number}|||${item.location}|||${item.itemName}`
             )
-        );
+          );
 
-        const itemsToCreate = [];
+          const itemsToCreate = [];
 
-        for (const row of normalizedRows) {
-          const apartmentKey = `${row.empreendimento}|||${row.apartamento}`;
-          const apartment = apartmentMap.get(apartmentKey);
-          const itemKey = `${row.empreendimento}|||${row.apartamento}|||${row.localizacao}|||${row.item}`;
+          for (const row of normalizedRows) {
+            const apartmentKey = `${row.empreendimento}|||${row.apartamento}`;
+            const apartment = apartmentMap.get(apartmentKey);
 
-          if (!checklistItemMap.has(itemKey)) {
-            itemsToCreate.push({
-              apartmentId: apartment.id,
-              location: row.localizacao,
-              itemName: row.item,
-              quantity: row.quantidade
-            });
+            if (!apartment) {
+              continue;
+            }
 
-            checklistItemMap.add(itemKey);
+            const itemKey = `${row.empreendimento}|||${row.apartamento}|||${row.localizacao}|||${row.item}`;
+
+            if (!checklistItemMap.has(itemKey)) {
+              itemsToCreate.push({
+                apartmentId: apartment.id,
+                location: row.localizacao,
+                itemName: row.item,
+                quantity: row.quantidade
+              });
+
+              checklistItemMap.add(itemKey);
+            }
           }
-        }
 
-        if (itemsToCreate.length > 0) {
-          await checklistItemRepository.createMany(itemsToCreate, db);
-          totalItemsCreated = itemsToCreate.length;
-        }
+          if (itemsToCreate.length > 0) {
+            await checklistItemRepository.createMany(itemsToCreate, db);
+            totalItemsCreated = itemsToCreate.length;
+          }
 
-        return {
-          totalEnterprisesCreated,
-          totalApartmentsCreated,
-          totalItemsCreated
-        };
-      });
+          return {
+            totalEnterprisesCreated,
+            totalApartmentsCreated,
+            totalItemsCreated
+          };
+        },
+        {
+          maxWait: 10000,
+          timeout: 60000
+        }
+      );
 
       return {
         message: 'Importação concluída com sucesso.',
