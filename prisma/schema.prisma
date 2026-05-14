@@ -27,6 +27,7 @@ model User {
   createdAt    DateTime     @default(now())
   inspections  Inspection[]
   enterprises  Enterprise[]
+  passwordResetTokens PasswordResetToken[]
 }
 
 model Enterprise {
@@ -92,4 +93,14 @@ model InspectionItem {
   updatedAt       DateTime       @updatedAt
 
   @@unique([inspectionId, checklistItemId])
+}
+
+model PasswordResetToken {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String   @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
 }

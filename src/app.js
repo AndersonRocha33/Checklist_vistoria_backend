@@ -9,6 +9,7 @@ const apartmentRoutes = require('./routes/apartment.routes');
 const inspectionRoutes = require('./routes/inspection.routes');
 const uploadRoutes = require('./routes/upload.routes');
 const errorHandler = require('./middleware/error-handler');
+const passwordResetRoutes = require('./routes/password-reset.routes');
 
 const app = express();
 
@@ -35,7 +36,7 @@ app.use('/enterprises', enterpriseRoutes);
 app.use('/apartments', apartmentRoutes);
 app.use('/inspections', inspectionRoutes);
 app.use('/upload', uploadRoutes);
-
+app.use('/auth', passwordResetRoutes);
 app.use(errorHandler);
 
 module.exports = app;
