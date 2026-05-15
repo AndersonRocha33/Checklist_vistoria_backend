@@ -12,6 +12,10 @@ function extractBase64Image(dataUrl) {
   return Buffer.from(match[1], 'base64');
 }
 
+function getItemCategory(item) {
+  return item?.checklistItem?.category || 'Sem categoria';
+}
+
 function groupItemsByLocation(items) {
   const grouped = {};
 
@@ -35,6 +39,42 @@ function groupItemsByLocation(items) {
           'pt-BR'
         )
       )
+    }));
+}
+
+function groupItemsByCategoryAndLocation(items) {
+  const grouped = {};
+
+  for (const item of items) {
+    const category = getItemCategory(item);
+    const location = item.checklistItem.location || 'Sem localização';
+
+    if (!grouped[category]) {
+      grouped[category] = {};
+    }
+
+    if (!grouped[category][location]) {
+      grouped[category][location] = [];
+    }
+
+    grouped[category][location].push(item);
+  }
+
+  return Object.keys(grouped)
+    .sort((a, b) => a.localeCompare(b, 'pt-BR'))
+    .map((category) => ({
+      category,
+      locations: Object.keys(grouped[category])
+        .sort((a, b) => a.localeCompare(b, 'pt-BR'))
+        .map((location) => ({
+          location,
+          items: grouped[category][location].sort((a, b) =>
+            (a.checklistItem.itemName || '').localeCompare(
+              b.checklistItem.itemName || '',
+              'pt-BR'
+            )
+          )
+        }))
     }));
 }
 
@@ -140,6 +180,110 @@ function drawHeaderBlock(doc, inspection) {
   doc.y = 208;
 }
 
+function drawPendingHeaderBlock(doc, inspection, selectedCategories) {
+  const logoPath = path.resolve(__dirname, '../assets/spotlar-logo.png');
+  const hasLogo = fs.existsSync(logoPath);
+
+  if (hasLogo) {
+    try {
+      doc.image(logoPath, 40, 32, {
+        fit: [150, 50],
+        align: 'left'
+      });
+    } catch (error) {
+      console.error('Erro ao carregar logo do relatório:', error.message);
+    }
+  }
+
+  doc
+    .font('Helvetica')
+    .fontSize(11)
+    .fillColor('#6b7280')
+    .text('pronto para morar', 58, 84, {
+      width: 140,
+      align: 'left',
+      lineBreak: false
+    });
+
+  doc
+    .strokeColor('#d1d5db')
+    .lineWidth(1)
+    .moveTo(210, 35)
+    .lineTo(210, 98)
+    .stroke();
+
+  doc
+    .font('Helvetica-Bold')
+    .fontSize(20)
+    .fillColor('#111827')
+    .text('Relatório de Pendências', 230, 42, {
+      width: 300,
+      align: 'left'
+    });
+
+  doc
+    .font('Helvetica')
+    .fontSize(9.5)
+    .fillColor('#6b7280')
+    .text('Itens não conformes filtrados por categoria', 230, 68, {
+      width: 300,
+      align: 'left'
+    });
+
+  doc
+    .lineWidth(0.8)
+    .roundedRect(40, 118, 515, 92, 8)
+    .stroke('#d1d5db');
+
+  const categoriesText =
+    selectedCategories && selectedCategories.length > 0
+      ? selectedCategories.join(', ')
+      : 'Todas as categorias';
+
+  doc
+    .font('Helvetica-Bold')
+    .fontSize(9.5)
+    .fillColor('#111827')
+    .text('Empreendimento:', 55, 132)
+    .font('Helvetica')
+    .text(inspection.apartment.enterprise.name, 140, 132, { width: 150 })
+
+    .font('Helvetica-Bold')
+    .text('Apartamento:', 55, 152)
+    .font('Helvetica')
+    .text(String(inspection.apartment.number), 140, 152, { width: 150 })
+
+    .font('Helvetica-Bold')
+    .text('Responsável:', 55, 172)
+    .font('Helvetica')
+    .text(inspection.user.name, 140, 172, { width: 150 })
+
+    .font('Helvetica-Bold')
+    .text('Categorias:', 55, 192)
+    .font('Helvetica')
+    .text(categoriesText, 140, 192, { width: 390 });
+
+  doc
+    .font('Helvetica-Bold')
+    .text('Data da emissão:', 310, 132)
+    .font('Helvetica')
+    .text(new Date().toLocaleString('pt-BR'), 410, 132, {
+      width: 125
+    })
+
+    .font('Helvetica-Bold')
+    .text('Status:', 310, 152)
+    .font('Helvetica')
+    .text(inspection.status, 410, 152, { width: 125 })
+
+    .font('Helvetica-Bold')
+    .text('ID:', 310, 172)
+    .font('Helvetica')
+    .text(inspection.id, 410, 172, { width: 125 });
+
+  doc.y = 228;
+}
+
 function drawMetricsBlock(doc, metrics) {
   ensurePageSpace(doc, 52);
 
@@ -185,6 +329,39 @@ function drawMetricsBlock(doc, metrics) {
   doc.y = startY + 52;
 }
 
+function drawPendingMetricsBlock(doc, totalPending) {
+  ensurePageSpace(doc, 52);
+
+  const startY = doc.y;
+  const startX = 40;
+  const boxWidth = 515;
+
+  doc
+    .lineWidth(0.6)
+    .roundedRect(startX, startY, boxWidth, 42, 7)
+    .stroke('#d1d5db');
+
+  doc
+    .font('Helvetica-Bold')
+    .fontSize(8.5)
+    .fillColor('#444444')
+    .text('TOTAL DE PENDÊNCIAS DO RELATÓRIO', startX + 12, startY + 8, {
+      width: boxWidth - 24,
+      align: 'center'
+    });
+
+  doc
+    .font('Helvetica-Bold')
+    .fontSize(16)
+    .fillColor('#c62828')
+    .text(String(totalPending), startX + 12, startY + 22, {
+      width: boxWidth - 24,
+      align: 'center'
+    });
+
+  doc.y = startY + 52;
+}
+
 function drawLocationTitle(doc, location) {
   ensurePageSpace(doc, 42);
 
@@ -203,6 +380,26 @@ function drawLocationTitle(doc, location) {
     .stroke('#d1d5db');
 
   doc.y = startY + 20;
+}
+
+function drawCategoryTitle(doc, category) {
+  ensurePageSpace(doc, 48);
+
+  const startY = doc.y + 6;
+
+  doc
+    .roundedRect(40, startY, 515, 24, 6)
+    .fill('#f3f4f6');
+
+  doc
+    .font('Helvetica-Bold')
+    .fontSize(11)
+    .fillColor('#111827')
+    .text(`Categoria: ${category}`, 50, startY + 7, {
+      width: 495
+    });
+
+  doc.y = startY + 34;
 }
 
 function getStatusTextStyle(status) {
@@ -242,6 +439,44 @@ function drawTableHeader(doc) {
 
   doc.text('STATUS', startX + itemColWidth + qtyColWidth, startY + 4, {
     width: statusColWidth,
+    align: 'center',
+    lineBreak: false
+  });
+
+  doc
+    .moveTo(startX, startY + headerHeight)
+    .lineTo(555, startY + headerHeight)
+    .lineWidth(0.6)
+    .stroke('#d1d5db');
+
+  doc.font('Helvetica').fillColor('#111111');
+  doc.y = startY + headerHeight + 2;
+}
+
+function drawPendingTableHeader(doc) {
+  ensurePageSpace(doc, 24);
+
+  const startX = 40;
+  const startY = doc.y;
+  const itemColWidth = 420;
+  const qtyColWidth = 55;
+  const headerHeight = 16;
+
+  doc.font('Helvetica-Bold').fontSize(8).fillColor('#444444');
+
+  doc.text('ITEM', startX + 6, startY + 4, {
+    width: itemColWidth - 12,
+    lineBreak: false
+  });
+
+  doc.text('QTDE', startX + itemColWidth, startY + 4, {
+    width: qtyColWidth,
+    align: 'center',
+    lineBreak: false
+  });
+
+  doc.text('STATUS', startX + itemColWidth + qtyColWidth, startY + 4, {
+    width: 40,
     align: 'center',
     lineBreak: false
   });
@@ -503,6 +738,187 @@ async function drawLocationSection(doc, group) {
   doc.y += 4;
 }
 
+function getPendingDetailsHeight(doc, item, photoCount) {
+  const notesText = item.notes || '-';
+
+  doc.font('Helvetica').fontSize(8.5);
+
+  const notesHeight = doc.heightOfString(notesText, {
+    width: 490
+  });
+
+  const baseHeight = 34 + notesHeight + 10;
+
+  if (photoCount === 0) {
+    return Math.max(54, baseHeight);
+  }
+
+  return Math.max(192, baseHeight + 138);
+}
+
+async function drawPendingDetails(doc, item) {
+  const startX = 40;
+  const width = 515;
+  const photos = getPhotoList(item);
+  const photoCount = photos.length;
+  const blockHeight = getPendingDetailsHeight(doc, item, photoCount);
+
+  ensurePageSpace(doc, blockHeight + 6);
+
+  const startY = doc.y;
+
+  doc
+    .lineWidth(0.5)
+    .roundedRect(startX, startY, width, blockHeight, 6)
+    .stroke('#e5e7eb');
+
+  let currentY = startY + 8;
+
+  doc
+    .font('Helvetica-Bold')
+    .fontSize(8.5)
+    .fillColor('#111827')
+    .text('Observação:', startX + 10, currentY, {
+      width: width - 20
+    });
+
+  currentY += 12;
+
+  doc
+    .font('Helvetica')
+    .fontSize(8.5)
+    .fillColor('#111111')
+    .text(item.notes || '-', startX + 10, currentY, {
+      width: width - 20
+    });
+
+  const notesHeight = doc.heightOfString(item.notes || '-', {
+    width: width - 20
+  });
+
+  currentY += notesHeight + 10;
+
+  if (photoCount > 0) {
+    try {
+      const imageBuffers = [];
+
+      for (let i = 0; i < photoCount; i++) {
+        const buffer = await getImageBuffer(photos[i]);
+        if (buffer) {
+          imageBuffers.push(buffer);
+        }
+      }
+
+      if (imageBuffers.length === 1) {
+        const photoWidth = 250;
+        const photoHeight = 135;
+        const photoX = startX + (width - photoWidth) / 2;
+
+        doc.image(imageBuffers[0], photoX, currentY, {
+          fit: [photoWidth, photoHeight],
+          align: 'center',
+          valign: 'center'
+        });
+      }
+
+      if (imageBuffers.length === 2) {
+        const photoWidth = 240;
+        const photoHeight = 135;
+        const gap = 12;
+        const totalWidth = photoWidth * 2 + gap;
+        const firstX = startX + (width - totalWidth) / 2;
+        const secondX = firstX + photoWidth + gap;
+
+        doc.image(imageBuffers[0], firstX, currentY, {
+          fit: [photoWidth, photoHeight],
+          align: 'center',
+          valign: 'center'
+        });
+
+        doc.image(imageBuffers[1], secondX, currentY, {
+          fit: [photoWidth, photoHeight],
+          align: 'center',
+          valign: 'center'
+        });
+      }
+    } catch (error) {
+      console.error('Erro ao carregar imagem no relatório de pendências:', error.message);
+
+      doc.font('Helvetica').fillColor('#c62828').fontSize(8).text(
+        'Não foi possível carregar a foto deste item.',
+        startX + 10,
+        currentY + 4
+      );
+
+      doc.fillColor('#111111');
+    }
+  }
+
+  doc.y = startY + blockHeight + 6;
+}
+
+async function drawPendingLocationSection(doc, group) {
+  ensurePageSpace(doc, 68);
+  drawLocationTitle(doc, group.location);
+  drawPendingTableHeader(doc);
+
+  const startX = 40;
+  const itemColWidth = 420;
+  const qtyColWidth = 55;
+
+  for (const item of group.items) {
+    const itemName = item.checklistItem.itemName || '-';
+    const rowHeight = getRowHeight(doc, itemName, itemColWidth - 14);
+    const photoCount = getPhotoList(item).length;
+    const detailsHeight = getPendingDetailsHeight(doc, item, photoCount) + 6;
+
+    const minSpace = rowHeight + detailsHeight + 8;
+
+    if (doc.y + minSpace > doc.page.height - doc.page.margins.bottom) {
+      doc.addPage();
+      drawLocationTitle(doc, group.location);
+      drawPendingTableHeader(doc);
+    }
+
+    const y = doc.y;
+
+    doc
+      .moveTo(startX, y - 2)
+      .lineTo(555, y - 2)
+      .lineWidth(0.35)
+      .stroke('#eeeeee');
+
+    doc.font('Helvetica').fontSize(8.1).fillColor('#111111');
+    doc.text(itemName, startX + 6, y + 1, {
+      width: itemColWidth - 14
+    });
+
+    doc.text(String(item.checklistItem.quantity || 0), startX + itemColWidth, y + 1, {
+      width: qtyColWidth,
+      align: 'center',
+      lineBreak: false
+    });
+
+    doc.font('Helvetica-Bold').fontSize(8).fillColor('#c62828').text(
+      'NC',
+      startX + itemColWidth + qtyColWidth,
+      y + 1,
+      {
+        width: 40,
+        align: 'center',
+        lineBreak: false
+      }
+    );
+
+    doc.fillColor('#111111');
+    doc.y = y + rowHeight + 2;
+
+    await drawPendingDetails(doc, item);
+  }
+
+  doc.y += 4;
+}
+
 function drawSignaturesBlock(doc, inspection) {
   ensurePageSpace(doc, 130);
 
@@ -594,6 +1010,15 @@ function drawSignaturesBlock(doc, inspection) {
   doc.y = boxY + 96;
 }
 
+function sanitizeFileName(value) {
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z0-9-_]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .toLowerCase();
+}
+
 class ReportService {
   async generateInspectionReport(res, inspection) {
     const doc = new PDFDocument({
@@ -620,6 +1045,71 @@ class ReportService {
     }
 
     drawSignaturesBlock(doc, inspection);
+    doc.end();
+  }
+
+  async generatePendingInspectionReport(res, inspection, options = {}) {
+    const selectedCategories = Array.isArray(options.categories)
+      ? options.categories.filter(Boolean)
+      : [];
+
+    const normalizedSelectedCategories = selectedCategories.map((category) =>
+      String(category).trim().toLowerCase()
+    );
+
+    let pendingItems = inspection.items.filter((item) => item.status === 'NAO_CONFORME');
+
+    if (normalizedSelectedCategories.length > 0) {
+      pendingItems = pendingItems.filter((item) =>
+        normalizedSelectedCategories.includes(getItemCategory(item).trim().toLowerCase())
+      );
+    }
+
+    const doc = new PDFDocument({
+      margin: 40,
+      size: 'A4'
+    });
+
+    const apartmentNumber = inspection?.apartment?.number || 'sem-numero';
+    const categoriesSlug =
+      selectedCategories.length > 0
+        ? sanitizeFileName(selectedCategories.join('-'))
+        : 'todas-categorias';
+
+    const fileName = `pendencias-${apartmentNumber}-${categoriesSlug}.pdf`;
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+
+    doc.pipe(res);
+
+    drawPendingHeaderBlock(doc, inspection, selectedCategories);
+    drawPendingMetricsBlock(doc, pendingItems.length);
+
+    if (pendingItems.length === 0) {
+      doc
+        .font('Helvetica-Bold')
+        .fontSize(12)
+        .fillColor('#111827')
+        .text('Nenhuma pendência encontrada para o filtro selecionado.', 40, doc.y + 14, {
+          width: 515,
+          align: 'center'
+        });
+
+      doc.end();
+      return;
+    }
+
+    const groupedCategories = groupItemsByCategoryAndLocation(pendingItems);
+
+    for (const categoryGroup of groupedCategories) {
+      drawCategoryTitle(doc, categoryGroup.category);
+
+      for (const locationGroup of categoryGroup.locations) {
+        await drawPendingLocationSection(doc, locationGroup);
+      }
+    }
+
     doc.end();
   }
 }

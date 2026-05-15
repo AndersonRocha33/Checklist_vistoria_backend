@@ -35,6 +35,12 @@ router.put(
 
 router.get('/:id/report', authMiddleware, asyncHandler(inspectionController.generateReport));
 
+router.get(
+  '/:id/pending-report',
+  authMiddleware,
+  asyncHandler(inspectionController.generatePendingReport)
+);
+
 router.get('/:id', authMiddleware, asyncHandler(inspectionController.getById));
 
 router.delete(

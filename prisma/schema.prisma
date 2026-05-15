@@ -20,34 +20,34 @@ enum InspectionStatus {
 }
 
 model User {
-  id           String       @id @default(uuid())
-  name         String
-  email        String       @unique
-  password     String
-  createdAt    DateTime     @default(now())
-  inspections  Inspection[]
-  enterprises  Enterprise[]
+  id                  String               @id @default(uuid())
+  name                String
+  email               String               @unique
+  password            String
+  createdAt           DateTime             @default(now())
+  inspections         Inspection[]
+  enterprises         Enterprise[]
   passwordResetTokens PasswordResetToken[]
 }
 
 model Enterprise {
-  id           String       @id @default(uuid())
-  name         String
-  ownerId      String?
-  owner        User?        @relation(fields: [ownerId], references: [id], onDelete: Cascade)
-  createdAt    DateTime     @default(now())
-  apartments   Apartment[]
+  id         String      @id @default(uuid())
+  name       String
+  ownerId    String?
+  owner      User?       @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  createdAt  DateTime    @default(now())
+  apartments Apartment[]
 
   @@index([ownerId])
   @@unique([name, ownerId])
 }
 
 model Apartment {
-  id             String           @id @default(uuid())
+  id             String          @id @default(uuid())
   number         String
   enterpriseId   String
-  enterprise     Enterprise       @relation(fields: [enterpriseId], references: [id], onDelete: Cascade)
-  createdAt      DateTime         @default(now())
+  enterprise     Enterprise      @relation(fields: [enterpriseId], references: [id], onDelete: Cascade)
+  createdAt      DateTime        @default(now())
   checklistItems ChecklistItem[]
   inspections    Inspection[]
 
@@ -59,6 +59,7 @@ model ChecklistItem {
   apartmentId     String
   apartment       Apartment        @relation(fields: [apartmentId], references: [id], onDelete: Cascade)
   location        String
+  category        String           @default("Sem categoria")
   itemName        String
   quantity        Int
   createdAt       DateTime         @default(now())
@@ -96,11 +97,11 @@ model InspectionItem {
 }
 
 model PasswordResetToken {
-  id        String   @id @default(uuid())
+  id        String    @id @default(uuid())
   userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tokenHash String   @unique
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
   expiresAt DateTime
   usedAt    DateTime?
-  createdAt DateTime @default(now())
+  createdAt DateTime  @default(now())
 }

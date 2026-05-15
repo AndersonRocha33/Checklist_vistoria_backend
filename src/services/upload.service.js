@@ -17,6 +17,10 @@ function normalizeComparableText(value) {
     .toLowerCase();
 }
 
+function normalizeColumnName(value) {
+  return normalizeComparableText(value).replace(/\s+/g, '');
+}
+
 function isAllowedTipo(tipo) {
   const normalized = normalizeComparableText(tipo);
   return normalized === 'produto' || normalized === 'produto sob medida';
@@ -35,9 +39,32 @@ function normalizeNumber(value) {
 }
 
 function getField(row, possibleKeys) {
-  for (const key of possibleKeys) {
-    if (row[key] !== undefined && row[key] !== null && String(row[key]).trim() !== '') {
-      return row[key];
+  const rowKeys = Object.keys(row);
+
+  for (const possibleKey of possibleKeys) {
+    const directValue = row[possibleKey];
+
+    if (
+      directValue !== undefined &&
+      directValue !== null &&
+      String(directValue).trim() !== ''
+    ) {
+      return directValue;
+    }
+
+    const normalizedPossibleKey = normalizeColumnName(possibleKey);
+
+    const realKey = rowKeys.find(
+      (key) => normalizeColumnName(key) === normalizedPossibleKey
+    );
+
+    if (
+      realKey &&
+      row[realKey] !== undefined &&
+      row[realKey] !== null &&
+      String(row[realKey]).trim() !== ''
+    ) {
+      return row[realKey];
     }
   }
 
@@ -159,6 +186,18 @@ class UploadService {
           ])
         );
 
+        const categoria =
+          normalizeText(
+            getField(row, [
+              'CATEGORIA',
+              'Categoria',
+              'categoria',
+              'CATEGORY',
+              'Category',
+              'category'
+            ])
+          ) || 'Sem categoria';
+
         const item = normalizeText(getField(row, ['ITEM', 'item', 'Item']));
 
         const quantidade = normalizeNumber(
@@ -174,6 +213,7 @@ class UploadService {
           empreendimento,
           apartamento,
           localizacao,
+          categoria,
           item,
           quantidade: Math.round(quantidade)
         });
@@ -313,7 +353,7 @@ class UploadService {
           const checklistItemMap = new Set(
             allChecklistItems.map(
               (item) =>
-                `${item.apartment.enterprise.name}|||${item.apartment.number}|||${item.location}|||${item.itemName}`
+                `${item.apartment.enterprise.name}|||${item.apartment.number}|||${item.location}|||${item.category || 'Sem categoria'}|||${item.itemName}`
             )
           );
 
@@ -327,12 +367,13 @@ class UploadService {
               continue;
             }
 
-            const itemKey = `${row.empreendimento}|||${row.apartamento}|||${row.localizacao}|||${row.item}`;
+            const itemKey = `${row.empreendimento}|||${row.apartamento}|||${row.localizacao}|||${row.categoria}|||${row.item}`;
 
             if (!checklistItemMap.has(itemKey)) {
               itemsToCreate.push({
                 apartmentId: apartment.id,
                 location: row.localizacao,
+                category: row.categoria,
                 itemName: row.item,
                 quantity: row.quantidade
               });

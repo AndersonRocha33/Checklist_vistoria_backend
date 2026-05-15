@@ -1,6 +1,22 @@
 const inspectionService = require('../services/inspection.service');
 const reportService = require('../services/report.service');
 
+function parseCategoriesQuery(value) {
+  if (!value) return [];
+
+  if (Array.isArray(value)) {
+    return value
+      .flatMap((item) => String(item).split(','))
+      .map((item) => item.trim())
+      .filter(Boolean);
+  }
+
+  return String(value)
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
 class InspectionController {
   async start(req, res) {
     const inspection = await inspectionService.start({
@@ -57,6 +73,26 @@ class InspectionController {
 
       return res.status(500).json({
         message: 'Erro ao gerar relatório.'
+      });
+    }
+  }
+
+  async generatePendingReport(req, res) {
+    try {
+      const inspection = await inspectionService.getById(req.params.id);
+      const categories = parseCategoriesQuery(req.query.categories);
+
+      await reportService.generatePendingInspectionReport(res, inspection, {
+        categories
+      });
+    } catch (error) {
+      console.error('=== ERRO AO GERAR RELATÓRIO DE PENDÊNCIAS ===');
+      console.error('Inspection ID:', req.params.id);
+      console.error('Mensagem:', error.message);
+      console.error('Stack:', error.stack);
+
+      return res.status(500).json({
+        message: 'Erro ao gerar relatório de pendências.'
       });
     }
   }
