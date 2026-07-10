@@ -11,7 +11,11 @@ const allowedStatuses = ['PENDENTE', 'CONFORME', 'NAO_CONFORME'];
 
 function startInspectionSchema(payload) {
   return {
-    apartmentId: requireString(payload.apartmentId, 'apartmentId', 'Apartment ID é obrigatório.')
+    apartmentId: requireString(
+      payload.apartmentId,
+      'apartmentId',
+      'Apartment ID é obrigatório.'
+    )
   };
 }
 

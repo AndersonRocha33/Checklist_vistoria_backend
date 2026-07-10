@@ -7,8 +7,26 @@ class InspectionItemRepository {
     });
   }
 
-  update(id, data) {
-    return prisma.inspectionItem.update({
+  findDetailedById(id, db = prisma) {
+    return db.inspectionItem.findUnique({
+      where: { id },
+      include: {
+        checklistItem: {
+          include: {
+            apartment: {
+              include: {
+                enterprise: true
+              }
+            }
+          }
+        },
+        inspection: true
+      }
+    });
+  }
+
+  update(id, data, db = prisma) {
+    return db.inspectionItem.update({
       where: { id },
       data,
       include: {
@@ -17,8 +35,8 @@ class InspectionItemRepository {
     });
   }
 
-  updateManyByIds(ids, data) {
-    return prisma.inspectionItem.updateMany({
+  updateManyByIds(ids, data, db = prisma) {
+    return db.inspectionItem.updateMany({
       where: {
         id: {
           in: ids
@@ -28,15 +46,16 @@ class InspectionItemRepository {
     });
   }
 
-  findManyByIds(ids) {
-    return prisma.inspectionItem.findMany({
+  findManyByIds(ids, db = prisma) {
+    return db.inspectionItem.findMany({
       where: {
         id: {
           in: ids
         }
       },
       include: {
-        checklistItem: true
+        checklistItem: true,
+        inspection: true
       }
     });
   }

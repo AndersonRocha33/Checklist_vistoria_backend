@@ -26,6 +26,7 @@ model User {
   password            String
   createdAt           DateTime             @default(now())
   inspections         Inspection[]
+  editedInspections   Inspection[]         @relation("InspectionLastEditor")
   enterprises         Enterprise[]
   passwordResetTokens PasswordResetToken[]
 }
@@ -38,8 +39,8 @@ model Enterprise {
   createdAt  DateTime    @default(now())
   apartments Apartment[]
 
-  @@index([ownerId])
   @@unique([name, ownerId])
+  @@index([ownerId])
 }
 
 model Apartment {
@@ -67,31 +68,39 @@ model ChecklistItem {
 }
 
 model Inspection {
-  id                  String            @id @default(uuid())
-  apartmentId         String
-  apartment           Apartment         @relation(fields: [apartmentId], references: [id], onDelete: Cascade)
-  userId              String
-  user                User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  status              InspectionStatus  @default(EM_ANDAMENTO)
-  reopenedFromPending Boolean           @default(false)
-  inspectorSignature  String?
-  clientSignature     String?
-  createdAt           DateTime          @default(now())
-  updatedAt           DateTime          @updatedAt
-  items               InspectionItem[]
+  id                     String           @id @default(uuid())
+  apartmentId            String
+  apartment              Apartment        @relation(fields: [apartmentId], references: [id], onDelete: Cascade)
+  userId                 String
+  user                   User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status                 InspectionStatus @default(EM_ANDAMENTO)
+  reopenedFromPending    Boolean          @default(false)
+  editingAfterCompletion Boolean          @default(false)
+  editedAfterCompletion  Boolean          @default(false)
+  finishedAt             DateTime?
+  lastEditedAt           DateTime?
+  lastEditedById         String?
+  lastEditedBy           User?            @relation("InspectionLastEditor", fields: [lastEditedById], references: [id], onDelete: SetNull)
+  inspectorSignature     String?
+  clientSignature        String?
+  createdAt              DateTime         @default(now())
+  updatedAt              DateTime         @updatedAt
+  items                  InspectionItem[]
+
+  @@index([lastEditedById])
 }
 
 model InspectionItem {
-  id              String         @id @default(uuid())
+  id              String        @id @default(uuid())
   inspectionId    String
-  inspection      Inspection     @relation(fields: [inspectionId], references: [id], onDelete: Cascade)
+  inspection      Inspection    @relation(fields: [inspectionId], references: [id], onDelete: Cascade)
   checklistItemId String
-  checklistItem   ChecklistItem  @relation(fields: [checklistItemId], references: [id], onDelete: Cascade)
-  status          ItemStatus     @default(PENDENTE)
+  checklistItem   ChecklistItem @relation(fields: [checklistItemId], references: [id], onDelete: Cascade)
+  status          ItemStatus    @default(PENDENTE)
   notes           String?
   photoUrl        String?
-  photoUrls       String[]       @default([])
-  updatedAt       DateTime       @updatedAt
+  photoUrls       String[]      @default([])
+  updatedAt       DateTime      @updatedAt
 
   @@unique([inspectionId, checklistItemId])
 }

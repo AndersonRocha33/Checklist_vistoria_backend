@@ -32,13 +32,43 @@ class InspectionController {
     return res.json(inspection);
   }
 
+  async startCompletedEdit(req, res) {
+    const inspection = await inspectionService.startCompletedEdit({
+      id: req.params.id,
+      userId: req.user.id
+    });
+
+    return res.json({
+      message: 'Modo de edição ativado.',
+      inspection
+    });
+  }
+
+  async finishCompletedEdit(req, res) {
+    const result = await inspectionService.finishCompletedEdit({
+      id: req.params.id,
+      userId: req.user.id
+    });
+
+    return res.json(result);
+  }
+
   async updateItem(req, res) {
-    const updated = await inspectionService.updateItem(req.params.itemId, req.validated.body);
+    const updated = await inspectionService.updateItem(
+      req.params.itemId,
+      req.validated.body,
+      req.user.id
+    );
+
     return res.json(updated);
   }
 
   async updateItemsBatch(req, res) {
-    const result = await inspectionService.updateItemsBatch(req.validated.body);
+    const result = await inspectionService.updateItemsBatch(
+      req.validated.body,
+      req.user.id
+    );
+
     return res.json(result);
   }
 
@@ -52,7 +82,11 @@ class InspectionController {
   }
 
   async saveSignatures(req, res) {
-    const result = await inspectionService.saveSignatures(req.params.id, req.validated.body);
+    const result = await inspectionService.saveSignatures(
+      req.params.id,
+      req.validated.body
+    );
+
     return res.json(result);
   }
 

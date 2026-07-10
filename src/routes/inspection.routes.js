@@ -27,13 +27,29 @@ router.put(
 );
 
 router.put(
+  '/:id/edit/start',
+  authMiddleware,
+  asyncHandler(inspectionController.startCompletedEdit)
+);
+
+router.put(
+  '/:id/edit/finish',
+  authMiddleware,
+  asyncHandler(inspectionController.finishCompletedEdit)
+);
+
+router.put(
   '/:id/signatures',
   authMiddleware,
   validate(saveSignaturesSchema),
   asyncHandler(inspectionController.saveSignatures)
 );
 
-router.get('/:id/report', authMiddleware, asyncHandler(inspectionController.generateReport));
+router.get(
+  '/:id/report',
+  authMiddleware,
+  asyncHandler(inspectionController.generateReport)
+);
 
 router.get(
   '/:id/pending-report',
@@ -41,7 +57,11 @@ router.get(
   asyncHandler(inspectionController.generatePendingReport)
 );
 
-router.get('/:id', authMiddleware, asyncHandler(inspectionController.getById));
+router.get(
+  '/:id',
+  authMiddleware,
+  asyncHandler(inspectionController.getById)
+);
 
 router.delete(
   '/item/:itemId/checklist',
@@ -56,6 +76,10 @@ router.put(
   asyncHandler(inspectionController.updateItem)
 );
 
-router.put('/:id/finish', authMiddleware, asyncHandler(inspectionController.finish));
+router.put(
+  '/:id/finish',
+  authMiddleware,
+  asyncHandler(inspectionController.finish)
+);
 
 module.exports = router;

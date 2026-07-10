@@ -37,7 +37,8 @@ class InspectionRepository {
   update(id, data, db = prisma) {
     return db.inspection.update({
       where: { id },
-      data
+      data,
+      include: this.getDetailedInclude()
     });
   }
 
@@ -53,7 +54,14 @@ class InspectionRepository {
           enterprise: true
         }
       },
-      user: true
+      user: true,
+      lastEditedBy: {
+        select: {
+          id: true,
+          name: true,
+          email: true
+        }
+      }
     };
   }
 }

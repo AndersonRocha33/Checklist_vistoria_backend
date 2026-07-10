@@ -15,22 +15,6 @@ class InspectionService {
     const latestInspection = await inspectionRepository.findLatestByApartmentId(apartmentId);
 
     if (latestInspection) {
-      const hasPendingItems = latestInspection.items.some((item) => item.status !== 'CONFORME');
-
-      if (latestInspection.status === 'CONCLUIDA' && hasPendingItems) {
-        await inspectionRepository.update(latestInspection.id, {
-          status: 'EM_ANDAMENTO',
-          reopenedFromPending: true,
-          userId
-        });
-
-        return inspectionRepository.findDetailedById(latestInspection.id);
-      }
-
-      if (latestInspection.status === 'CONCLUIDA' && !hasPendingItems) {
-        return latestInspection;
-      }
-
       return latestInspection;
     }
 
@@ -39,7 +23,9 @@ class InspectionService {
         {
           apartmentId,
           userId,
-          reopenedFromPending: false
+          reopenedFromPending: false,
+          editingAfterCompletion: false,
+          editedAfterCompletion: false
         },
         db
       );
@@ -73,13 +59,162 @@ class InspectionService {
     return inspection;
   }
 
-  updateItem(itemId, data) {
-    return inspectionItemRepository.update(itemId, data);
+  async startCompletedEdit({ id, userId }) {
+    const inspection = await inspectionRepository.findDetailedById(id);
+
+    if (!inspection) {
+      throw new NotFoundError('Vistoria não encontrada.');
+    }
+
+    if (inspection.status !== 'CONCLUIDA') {
+      throw new ValidationError('Somente vistorias concluídas podem entrar no modo de edição.');
+    }
+
+    return inspectionRepository.update(id, {
+      editingAfterCompletion: true,
+      lastEditedById: userId
+    });
   }
 
-  async updateItemsBatch(data) {
-    await inspectionItemRepository.updateManyByIds(data.itemIds, {
-      status: data.status
+  async finishCompletedEdit({ id, userId }) {
+    const inspection = await inspectionRepository.findDetailedById(id);
+
+    if (!inspection) {
+      throw new NotFoundError('Vistoria não encontrada.');
+    }
+
+    if (inspection.status !== 'CONCLUIDA') {
+      throw new ValidationError('Esta vistoria não está concluída.');
+    }
+
+    if (!inspection.editingAfterCompletion) {
+      throw new ValidationError('A vistoria não está no modo de edição.');
+    }
+
+    const updatedInspection = await inspectionRepository.update(id, {
+      editingAfterCompletion: false,
+      editedAfterCompletion: true,
+      lastEditedAt: new Date(),
+      lastEditedById: userId
+    });
+
+    return {
+      message: 'Alterações da vistoria salvas com sucesso.',
+      inspection: updatedInspection
+    };
+  }
+
+  async assertItemCanBeEdited(itemId, userId, db = prisma) {
+    const inspectionItem = await inspectionItemRepository.findDetailedById(itemId, db);
+
+    if (!inspectionItem) {
+      throw new NotFoundError('Item da vistoria não encontrado.');
+    }
+
+    const ownerId = inspectionItem.checklistItem?.apartment?.enterprise?.ownerId;
+
+    if (ownerId && ownerId !== userId) {
+      throw new NotFoundError('Item não encontrado para este usuário.');
+    }
+
+    if (
+      inspectionItem.inspection.status === 'CONCLUIDA' &&
+      !inspectionItem.inspection.editingAfterCompletion
+    ) {
+      throw new ValidationError(
+        'Esta vistoria está concluída. Ative o modo de edição antes de alterar os itens.'
+      );
+    }
+
+    return inspectionItem;
+  }
+
+  async updateItem(itemId, data, userId) {
+    const inspectionItem = await this.assertItemCanBeEdited(itemId, userId);
+
+    const updatedItem = await prisma.$transaction(async (db) => {
+      const item = await inspectionItemRepository.update(itemId, data, db);
+
+      if (inspectionItem.inspection.status === 'CONCLUIDA') {
+        await inspectionRepository.update(
+          inspectionItem.inspectionId,
+          {
+            editedAfterCompletion: true,
+            lastEditedAt: new Date(),
+            lastEditedById: userId
+          },
+          db
+        );
+      }
+
+      return item;
+    });
+
+    return updatedItem;
+  }
+
+  async updateItemsBatch(data, userId) {
+    if (!Array.isArray(data.itemIds) || data.itemIds.length === 0) {
+      throw new ValidationError('Informe ao menos um item para atualização em massa.');
+    }
+
+    const items = await inspectionItemRepository.findManyByIds(data.itemIds);
+
+    if (items.length !== data.itemIds.length) {
+      throw new NotFoundError('Um ou mais itens da vistoria não foram encontrados.');
+    }
+
+    const inspectionIds = [...new Set(items.map((item) => item.inspectionId))];
+
+    if (inspectionIds.length !== 1) {
+      throw new ValidationError('Os itens selecionados precisam pertencer à mesma vistoria.');
+    }
+
+    const inspection = await inspectionRepository.findDetailedById(inspectionIds[0]);
+
+    if (!inspection) {
+      throw new NotFoundError('Vistoria não encontrada.');
+    }
+
+    const ownerId = inspection.apartment?.enterprise?.ownerId;
+
+    if (ownerId && ownerId !== userId) {
+      throw new NotFoundError('Vistoria não encontrada para este usuário.');
+    }
+
+    if (inspection.status === 'CONCLUIDA' && !inspection.editingAfterCompletion) {
+      throw new ValidationError(
+        'Esta vistoria está concluída. Ative o modo de edição antes de alterar os itens.'
+      );
+    }
+
+    await prisma.$transaction(async (db) => {
+      await inspectionItemRepository.updateManyByIds(
+        data.itemIds,
+        {
+          status: data.status,
+          ...(data.status === 'CONFORME'
+            ? {
+                notes: '',
+                photoUrl: '',
+                photoUrls: []
+              }
+            : {})
+        },
+        db
+      );
+
+      if (inspection.status === 'CONCLUIDA') {
+        await inspectionRepository.update(
+          inspection.id,
+          {
+            editedAfterCompletion: true,
+            lastEditedAt: new Date(),
+            lastEditedById: userId
+          },
+          db
+        );
+      }
     });
 
     const updatedItems = await inspectionItemRepository.findManyByIds(data.itemIds);
@@ -91,33 +226,27 @@ class InspectionService {
   }
 
   async deleteChecklistItemFromInspectionItem({ itemId, userId }) {
-    const inspectionItem = await prisma.inspectionItem.findUnique({
-      where: { id: itemId },
-      include: {
-        checklistItem: {
-          include: {
-            apartment: {
-              include: {
-                enterprise: true
-              }
-            }
-          }
-        },
-        inspection: true
+    const inspectionItem = await this.assertItemCanBeEdited(itemId, userId);
+
+    await prisma.$transaction(async (db) => {
+      await db.checklistItem.delete({
+        where: {
+          id: inspectionItem.checklistItemId
+        }
+      });
+
+      if (inspectionItem.inspection.status === 'CONCLUIDA') {
+        await inspectionRepository.update(
+          inspectionItem.inspectionId,
+          {
+            editedAfterCompletion: true,
+            lastEditedAt: new Date(),
+            lastEditedById: userId
+          },
+          db
+        );
       }
     });
-
-    if (!inspectionItem) {
-      throw new NotFoundError('Item da vistoria não encontrado.');
-    }
-
-    const enterpriseOwnerId = inspectionItem.checklistItem?.apartment?.enterprise?.ownerId;
-
-    if (enterpriseOwnerId && enterpriseOwnerId !== userId) {
-      throw new NotFoundError('Item não encontrado para este usuário.');
-    }
-
-    await checklistItemRepository.deleteById(inspectionItem.checklistItemId);
 
     return {
       message: 'Item excluído do checklist com sucesso.'
@@ -167,7 +296,9 @@ class InspectionService {
     }
 
     const finishedInspection = await inspectionRepository.update(id, {
-      status: 'CONCLUIDA'
+      status: 'CONCLUIDA',
+      finishedAt: new Date(),
+      editingAfterCompletion: false
     });
 
     return {
